@@ -7,12 +7,21 @@ class M3UChannel {
   final String? group;
   
   M3UChannel({required this.name, required this.url, this.logo, this.group});
+  
+  Map toJson() => {
+    'name': name,
+    'stream_icon': logo,
+    'category_name': group,
+    'url': url,
+    'stream_type': 'live',
+    'stream_id': url.hashCode,
+  };
 }
 
 class M3UParser {
   static Future<List<M3UChannel>> parseFromUrl(String url) async {
     final res = await http.get(Uri.parse(url));
-    if (res.statusCode != 200) throw Exception('فشل تحميل M3U');
+    if (res.statusCode!= 200) throw Exception('فشل تحميل M3U');
     return parse(res.body);
   }
 
@@ -24,21 +33,18 @@ class M3UParser {
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.startsWith('#EXTINF:')) {
-        // #EXTINF:-1 tvg-logo="http://..." group-title="News",BBC News
         name = line.split(',').last;
-        logo = _extractAttr(line, 'tvg-logo');
-        group = _extractAttr(line, 'group-title');
-      } else if (line.startsWith('http')) {
-        if (name != null) {
-          channels.add(M3UChannel(name: name, url: line, logo: logo, group: group));
-          name = logo = group = null;
-        }
+        logo = _extract(line, 'tvg-logo');
+        group = _extract(line, 'group-title');
+      } else if (line.startsWith('http') && name!= null) {
+        channels.add(M3UChannel(name: name, url: line, logo: logo, group: group));
+        name = logo = group = null;
       }
     }
     return channels;
   }
 
-  static String? _extractAttr(String line, String attr) {
+  static String? _extract(String line, String attr) {
     final regex = RegExp('$attr="(.*?)"');
     return regex.firstMatch(line)?.group(1);
   }
