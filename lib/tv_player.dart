@@ -1,7 +1,6 @@
-import 'package:fijkplayer/fijkplayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:better_player/better_player.dart';
 
 class TvPlayerScreen extends StatefulWidget {
   final String videoUrl;
@@ -13,7 +12,7 @@ class TvPlayerScreen extends StatefulWidget {
   final String password;
 
   const TvPlayerScreen({
-    super.key,
+    Key? key,
     required this.videoUrl,
     required this.channelName,
     this.channelsList,
@@ -21,123 +20,102 @@ class TvPlayerScreen extends StatefulWidget {
     required this.server,
     required this.username,
     required this.password,
-  });
+  }) : super(key: key);
 
   @override
-  State<TvPlayerScreen> createState() => _TvPlayerScreenState();
+  _TvPlayerScreenState createState() => _TvPlayerScreenState();
 }
 
 class _TvPlayerScreenState extends State<TvPlayerScreen> {
-  final FijkPlayer player = FijkPlayer();
+  BetterPlayerController? _controller;
   int currentIndex = 0;
-  bool showUI = true;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     currentIndex = widget.initialIndex?? 0;
-    WakelockPlus.enable();
     _initPlayer(widget.videoUrl);
   }
 
-  void _initPlayer(String url) async {
-    await player.setOption(FijkOption.hostCategory, "enable-snapshot", 1);
-    await player.setOption(FijkOption.playerCategory, "mediacodec", 1);
-    await player.setOption(FijkOption.playerCategory, "mediacodec-auto-rotate", 1);
-    await player.setOption(FijkOption.playerCategory, "mediacodec-handle-resolution-change", 1);
-    await player.setDataSource(url, autoPlay: true);
-    await player.enterFullScreen();
-  }
+  void _initPlayer(String url) {
+    setState(() => isLoading = true);
+    _controller?.dispose();
 
-  void _handleKey(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        _playNext();
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        _playPrev();
-      } else if (event.logicalKey == LogicalKeyboardKey.select ||
-                 event.logicalKey == LogicalKeyboardKey.enter) {
-        setState(() => showUI =!showUI);
-      } else if (event.logicalKey == LogicalKeyboardKey.goBack ||
-                 event.logicalKey == LogicalKeyboardKey.escape) {
-        Navigator.pop(context);
+    BetterPlayerDataSource dataSource = BetterPlayerDataSource(
+      BetterPlayerDataSourceType.network,
+      url,
+      headers: {"User-Agent": "VLC/3.0.18", "Referer": widget.server},
+      liveStream: true,
+      videoFormat: BetterPlayerVideoFormat.hls,
+    );
+
+    _controller = BetterPlayerController(
+      BetterPlayerConfiguration(
+        autoPlay: true,
+        fullScreenByDefault: true,
+        allowedScreenSleep: false,
+        controlsConfiguration: BetterPlayerControlsConfiguration(
+          showControlsOnInitialize: false,
+          enableProgressBar: false,
+        ),
+      ),
+      betterPlayerDataSource: dataSource,
+    );
+
+    _controller!.addEventsListener((e) {
+      if (e.betterPlayerEventType == BetterPlayerEventType.initialized) {
+        setState(() => isLoading = false);
       }
-    }
+      if (e.betterPlayerEventType == BetterPlayerEventType.exception) {
+        if (url.endsWith('.m3u8')) {
+          _initPlayer(url.replaceAll('.m3u8', '.ts'));
+        }
+      }
+    });
   }
 
-  void _playNext() {
-    if (widget.channelsList!= null && currentIndex < widget.channelsList!.length - 1) {
-      setState(() => currentIndex++);
-      final nextCh = widget.channelsList![currentIndex];
-      final url = '${widget.server}/live/${widget.username}/${widget.password}/${nextCh['stream_id']}.m3u8';
-      player.reset().then((_) => player.setDataSource(url, autoPlay: true));
-    }
-  }
-
-  void _playPrev() {
-    if (widget.channelsList!= null && currentIndex > 0) {
-      setState(() => currentIndex--);
-      final prevCh = widget.channelsList![currentIndex];
-      final url = '${widget.server}/live/${widget.username}/${widget.password}/${prevCh['stream_id']}.m3u8';
-      player.reset().then((_) => player.setDataSource(url, autoPlay: true));
+  void _changeChannel(int dir) {
+    if (widget.channelsList == null) return;
+    int newIndex = currentIndex + dir;
+    if (newIndex >= 0 && newIndex < widget.channelsList!.length) {
+      currentIndex = newIndex;
+      var item = widget.channelsList![currentIndex];
+      String url = '${widget.server}/live/${widget.username}/${widget.password}/${item['stream_id']}.m3u8';
+      _initPlayer(url);
     }
   }
 
   @override
   void dispose() {
-    WakelockPlus.disable();
-    player.release();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    String currentName = widget.channelsList!= null
-       ? widget.channelsList![currentIndex]['name']
-        : widget.channelName;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Focus(
         autofocus: true,
-        onKeyEvent: (node, event) {
-          _handleKey(event);
+        onKeyEvent: (n, e) {
+          if (e is KeyDownEvent) {
+            if (e.logicalKey == LogicalKeyboardKey.arrowUp) _changeChannel(1);
+            if (e.logicalKey == LogicalKeyboardKey.arrowDown) _changeChannel(-1);
+            if (e.logicalKey == LogicalKeyboardKey.goBack) Navigator.pop(context);
+          }
           return KeyEventResult.handled;
         },
         child: Stack(
           children: [
-            Center(
-              child: FijkView(
-                player: player,
-                color: Colors.black,
-                panelBuilder: fijkPanel2Builder(),
-              ),
+            if (_controller!= null) BetterPlayer(controller: _controller!),
+            if (isLoading) Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                CircularProgressIndicator(color: Colors.red),
+                SizedBox(height: 15),
+                Text('جاري التحميل...', style: TextStyle(color: Colors.white, fontSize: 18)),
+              ]),
             ),
-            if (showUI)
-              Positioned(
-                top: 40,
-                left: 40,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    currentName,
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            if (showUI && widget.channelsList!= null)
-              Positioned(
-                bottom: 40,
-                left: 40,
-                child: Text(
-                  '↑↓ تغيير القناة OK إخفاء/إظهار رجوع للخروج',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ),
           ],
         ),
       ),
