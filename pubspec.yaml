@@ -1,42 +1,21 @@
-name: kamel_tv
-description: Kamel TV IPTV Player for Android TV
-version: 1.0.0+4
+name: kamel_player
+description: Kamel TV Player
+publish_to: 'none'
+version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.0
-  intl: ^0.20.2
-  cupertino_icons: ^1.0.6
+  http: ^1.2.1
   shared_preferences: ^2.2.3
-  wakelock_plus: ^1.1.4
-  package_info_plus: ^4.2.0
-  fijkplayer:
-    git:
-      url: https://github.com/jonafeucht/fijkplayer.git
-      ref: agp8-support
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
+  better_player: ^0.0.83
+  cupertino_icons: ^1.0.6
 
 flutter:
   uses-material-design: true
-  
   assets:
-    - assets/icon.png
     - assets/background.jpeg
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: false
-  image_path: "assets/icon.png"
-  min_sdk_android: 21
-  adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/icon.png"
-  tv_banner: "assets/background.jpeg"
+    - assets/icon.png
