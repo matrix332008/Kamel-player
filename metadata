@@ -1,0 +1,16 @@
+version:
+  revision: 1
+  channel: stable
+
+project_type: app
+
+migration:
+  platforms:
+    - platform: root
+      create_revision: 1
+    - platform: android
+      create_revision: 1
+    - platform: ios
+      create_revision: 1
+    - platform: web
+      create_revision: 1
