@@ -107,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 image: DecorationImage(
-                  image: AssetImage('assets/profile.jpeg'),
+                  image: AssetImage('assets/icon.png'),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -456,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(15),
                           border: Border.all(color: Colors.red, width: 3),
                           image: DecorationImage(
-                            image: AssetImage('assets/profile.jpeg'),
+                            image: AssetImage('assets/icon.png'),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -650,9 +650,9 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int selectedIndex = 0; // 0=Live, 1=Movies, 2=Series, 3=Fav
-  int selectedGroupIndex = 0; // للتنقل بين الجروبات
-  int selectedItemIndex = 0; // للتنقل داخل العناصر
+  int selectedIndex = 0;
+  int selectedGroupIndex = 0;
+  int selectedItemIndex = 0;
 
   List liveCategories = [];
   List movieCategories = [];
@@ -665,7 +665,7 @@ class _MainScreenState extends State<MainScreen> {
   String selectedCategory = '';
 
   final ScrollController _scrollController = ScrollController();
-  int currentFocusArea = 0; // 0=Menu, 1=Groups, 2=Items
+  int currentFocusArea = 0;
 
   @override
   void initState() {
@@ -692,16 +692,11 @@ class _MainScreenState extends State<MainScreen> {
 
   _loadData() async {
     if (widget.loginType == 'm3u') {
-      // TODO: Parse M3U هنا
       setState(() => isLoading = false);
       return;
     }
-
     try {
-      // Live Categories
-      final catRes = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_live_categories'
-      ));
+      final catRes = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_live_categories'));
       if (catRes.statusCode == 200) {
         liveCategories = json.decode(catRes.body);
         if (liveCategories.isNotEmpty) {
@@ -709,142 +704,61 @@ class _MainScreenState extends State<MainScreen> {
           await _loadChannels(selectedCategory);
         }
       }
-
-      // Movie Categories
-      final movCatRes = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_vod_categories'
-      ));
-      if (movCatRes.statusCode == 200) {
-        movieCategories = json.decode(movCatRes.body);
-      }
-
-      // Series Categories
-      final serCatRes = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_categories'
-      ));
-      if (serCatRes.statusCode == 200) {
-        seriesCategories = json.decode(serCatRes.body);
-      }
-
+      final movCatRes = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_vod_categories'));
+      if (movCatRes.statusCode == 200) { movieCategories = json.decode(movCatRes.body); }
+      final serCatRes = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_categories'));
+      if (serCatRes.statusCode == 200) { seriesCategories = json.decode(serCatRes.body); }
       setState(() => isLoading = false);
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
+    } catch (e) { setState(() => isLoading = false); }
   }
 
   _loadChannels(String catId) async {
     setState(() => isLoading = true);
     try {
-      final res = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_live_streams&category_id=$catId'
-      ));
-      if (res.statusCode == 200) {
-        setState(() {
-          channels = json.decode(res.body);
-          isLoading = false;
-          selectedItemIndex = 0;
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
+      final res = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_live_streams&category_id=$catId'));
+      if (res.statusCode == 200) { setState(() { channels = json.decode(res.body); isLoading = false; selectedItemIndex = 0; }); }
+    } catch (e) { setState(() => isLoading = false); }
   }
 
   _loadMovies(String catId) async {
     setState(() => isLoading = true);
     try {
-      final res = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_vod_streams&category_id=$catId'
-      ));
-      if (res.statusCode == 200) {
-        setState(() {
-          movies = json.decode(res.body);
-          isLoading = false;
-          selectedItemIndex = 0;
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
+      final res = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_vod_streams&category_id=$catId'));
+      if (res.statusCode == 200) { setState(() { movies = json.decode(res.body); isLoading = false; selectedItemIndex = 0; }); }
+    } catch (e) { setState(() => isLoading = false); }
   }
 
   _loadSeries(String catId) async {
     setState(() => isLoading = true);
     try {
-      final res = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series&category_id=$catId'
-      ));
-      if (res.statusCode == 200) {
-        setState(() {
-          series = json.decode(res.body);
-          isLoading = false;
-          selectedItemIndex = 0;
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
+      final res = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series&category_id=$catId'));
+      if (res.statusCode == 200) { setState(() { series = json.decode(res.body); isLoading = false; selectedItemIndex = 0; }); }
+    } catch (e) { setState(() => isLoading = false); }
   }
 
   void _handleKey(KeyEvent event) {
     if (event is KeyDownEvent) {
-      List currentGroups = [];
-      List currentList = [];
+      List currentGroups = []; List currentList = [];
+      if (selectedIndex == 0) { currentGroups = liveCategories; currentList = channels; }
+      else if (selectedIndex == 1) { currentGroups = movieCategories; currentList = movies; }
+      else if (selectedIndex == 2) { currentGroups = seriesCategories; currentList = series; }
+      else if (selectedIndex == 3) { currentList = favorites; }
 
-      if (selectedIndex == 0) {
-        currentGroups = liveCategories;
-        currentList = channels;
-      } else if (selectedIndex == 1) {
-        currentGroups = movieCategories;
-        currentList = movies;
-      } else if (selectedIndex == 2) {
-        currentGroups = seriesCategories;
-        currentList = series;
-      } else if (selectedIndex == 3) {
-        currentList = favorites;
+      if (event.logicalKey == LogicalKeyboardKey.goBack || event.logicalKey == LogicalKeyboardKey.escape) {
+        if (currentFocusArea == 0) { SystemNavigator.pop(); } else { setState(() => currentFocusArea = 0); } return;
       }
-
-      // الخروج من التطبيق
-      if (event.logicalKey == LogicalKeyboardKey.goBack ||
-          event.logicalKey == LogicalKeyboardKey.escape) {
-        if (currentFocusArea == 0) {
-          SystemNavigator.pop(); // يخرج من التطبيق
-        } else {
-          setState(() => currentFocusArea = 0); // يرجع للقائمة الرئيسية
-        }
-        return;
-      }
-
       if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        if (currentFocusArea == 2 && selectedItemIndex > 0) {
-          setState(() {
-            selectedItemIndex--;
-            _scrollToSelected();
-          });
-        } else if (currentFocusArea == 1 && selectedGroupIndex > 0) {
-          setState(() => selectedGroupIndex--);
-        } else if (currentFocusArea == 0 && selectedIndex > 0) {
-          setState(() => selectedIndex--);
-        }
+        if (currentFocusArea == 2 && selectedItemIndex > 0) { setState(() { selectedItemIndex--; _scrollToSelected(); }); }
+        else if (currentFocusArea == 1 && selectedGroupIndex > 0) { setState(() => selectedGroupIndex--); }
+        else if (currentFocusArea == 0 && selectedIndex > 0) { setState(() => selectedIndex--); }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        if (currentFocusArea == 2 && selectedItemIndex < currentList.length - 1) {
-          setState(() {
-            selectedItemIndex++;
-            _scrollToSelected();
-          });
-        } else if (currentFocusArea == 1 && selectedGroupIndex < currentGroups.length - 1) {
-          setState(() => selectedGroupIndex++);
-        } else if (currentFocusArea == 0 && selectedIndex < 3) {
-          setState(() => selectedIndex++);
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        if (currentFocusArea > 0) {
-          setState(() => currentFocusArea--);
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        if (currentFocusArea == 2 && selectedItemIndex < currentList.length - 1) { setState(() { selectedItemIndex++; _scrollToSelected(); }); }
+        else if (currentFocusArea == 1 && selectedGroupIndex < currentGroups.length - 1) { setState(() => selectedGroupIndex++); }
+        else if (currentFocusArea == 0 && selectedIndex < 3) { setState(() => selectedIndex++); }
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) { if (currentFocusArea > 0) { setState(() => currentFocusArea--); } }
+      else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         if (currentFocusArea < 2 && currentList.isNotEmpty) {
           setState(() => currentFocusArea++);
-          // تحميل البيانات عند الدخول للجروب
           if (currentFocusArea == 1 && currentGroups.isNotEmpty) {
             String catId = currentGroups[selectedGroupIndex]['category_id'];
             if (selectedIndex == 0) _loadChannels(catId);
@@ -852,12 +766,9 @@ class _MainScreenState extends State<MainScreen> {
             else if (selectedIndex == 2) _loadSeries(catId);
           }
         }
-      } else if (event.logicalKey == LogicalKeyboardKey.select ||
-                 event.logicalKey == LogicalKeyboardKey.enter ||
-                 event.logicalKey == LogicalKeyboardKey.gameButtonA) {
-        if (currentFocusArea == 2 && currentList.isNotEmpty) {
-          _playItem(currentList[selectedItemIndex]);
-        } else if (currentFocusArea == 1 && currentGroups.isNotEmpty) {
+      } else if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.gameButtonA) {
+        if (currentFocusArea == 2 && currentList.isNotEmpty) { _playItem(currentList[selectedItemIndex]); }
+        else if (currentFocusArea == 1 && currentGroups.isNotEmpty) {
           String catId = currentGroups[selectedGroupIndex]['category_id'];
           if (selectedIndex == 0) _loadChannels(catId);
           else if (selectedIndex == 1) _loadMovies(catId);
@@ -868,827 +779,70 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _scrollToSelected() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        selectedItemIndex * 80.0,
-        duration: Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
+  void _scrollToSelected() { if (_scrollController.hasClients) { _scrollController.animateTo(selectedItemIndex * 80.0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut); } }
 
   void _playItem(Map item) {
-    String url = '';
-    String title = item['name']?? '';
-
-    if (selectedIndex == 0 || item['stream_type'] == 'live') {
-      url = '${widget.server}/live/${widget.username}/${widget.password}/${item['stream_id']}.m3u8';
-    } else if (selectedIndex == 1 || item['stream_type'] == 'movie') {
-      url = '${widget.server}/movie/${widget.username}/${widget.password}/${item['stream_id']}.${item['container_extension']}';
-    } else if (selectedIndex == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SeriesDetailsScreen(
-            server: widget.server,
-            username: widget.username,
-            password: widget.password,
-            series: item,
-          ),
-        ),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TvPlayerScreen(
-          videoUrl: url,
-          channelName: title,
-          channelsList: selectedIndex == 0? channels : null,
-          initialIndex: selectedIndex == 0? selectedItemIndex : null,
-          server: widget.server,
-          username: widget.username,
-          password: widget.password,
-        ),
-      ),
-    );
+    String url = ''; String title = item['name']?? '';
+    if (selectedIndex == 0 || item['stream_type'] == 'live') { url = '${widget.server}/live/${widget.username}/${widget.password}/${item['stream_id']}.m3u8'; }
+    else if (selectedIndex == 1 || item['stream_type'] == 'movie') { url = '${widget.server}/movie/${widget.username}/${widget.password}/${item['stream_id']}.${item['container_extension']}'; }
+    else if (selectedIndex == 2) { Navigator.push(context, MaterialPageRoute(builder: (_) => SeriesDetailsScreen(server: widget.server, username: widget.username, password: widget.password, series: item))); return; }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => TvPlayerScreen(videoUrl: url, channelName: title, channelsList: selectedIndex == 0? channels : null, initialIndex: selectedIndex == 0? selectedItemIndex : null, server: widget.server, username: widget.username, password: widget.password)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        SystemNavigator.pop();
-        return false;
-      },
-      child: Scaffold(
-        backgroundColor: Color(0xFF0D1B2A),
-        body: Focus(
-          autofocus: true,
-          onKeyEvent: (node, event) {
-            _handleKey(event);
-            return KeyEventResult.handled;
-          },
-          child: Row(
-            children: [
-              // القائمة الرئيسية
-              Container(
-                width: 250,
-                color: Color(0xFF1B263B),
-                child: Column(
-                  children: [
-                    Container(
-                      height: 100,
-                      padding: EdgeInsets.all(15),
-                      child: Row(
-                        children: [
-                          // رجعنا صورتك هنا ✅
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(25),
-                              image: DecorationImage(
-                                image: AssetImage('assets/profile.jpeg'),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Kamel TV',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  widget.username,
-                                  style: TextStyle(color: Colors.white54, fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(color: Colors.white24),
-                    _buildMenuItem(0, Icons.live_tv, 'البث المباشر'),
-                    _buildMenuItem(1, Icons.movie, 'الأفلام'),
-                    _buildMenuItem(2, Icons.tv, 'المسلسلات'),
-                    _buildMenuItem(3, Icons.favorite, 'المفضلة'),
-                    Spacer(),
-                    Padding(
-                      padding: EdgeInsets.all(15),
-                      child: Text(
-                        '+420777099379',
-                        style: TextStyle(color: Colors.red, fontSize: 16),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // الجروبات
-              if (selectedIndex!= 3)
-                Container(
-                  width: 200,
-                  color: Colors.black.withOpacity(0.5),
-                  child: _buildGroupsList(),
-                ),
-              // المحتوى
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/background.jpeg'),
-                      fit: BoxFit.cover,
-                      colorFilter: ColorFilter.mode(
-                        Colors.black.withOpacity(0.7),
-                        BlendMode.darken,
-                      ),
-                    ),
-                  ),
-                  child: isLoading
-                     ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE50914)),
-                          ),
-                        )
-                      : _buildContent(),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return WillPopScope(onWillPop: () async { SystemNavigator.pop(); return false; }, child: Scaffold(backgroundColor: Color(0xFF0D1B2A), body: Focus(autofocus: true, onKeyEvent: (n,e){_handleKey(e);return KeyEventResult.handled;}, child: Row(children: [
+      Container(width: 250, color: Color(0xFF1B263B), child: Column(children: [
+        Container(height: 100, padding: EdgeInsets.all(15), child: Row(children: [
+          Container(width: 50, height: 50, decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), image: DecorationImage(image: AssetImage('assets/icon.png'), fit: BoxFit.cover))),
+          SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text('Kamel TV', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(widget.username, style: TextStyle(color: Colors.white54, fontSize: 12), overflow: TextOverflow.ellipsis),
+          ])),
+        ])),
+        Divider(color: Colors.white24),
+        _buildMenuItem(0, Icons.live_tv, 'البث المباشر'),
+        _buildMenuItem(1, Icons.movie, 'الأفلام'),
+        _buildMenuItem(2, Icons.tv, 'المسلسلات'),
+        _buildMenuItem(3, Icons.favorite, 'المفضلة'),
+        Spacer(),
+        Padding(padding: EdgeInsets.all(15), child: Text('+420777099379', style: TextStyle(color: Colors.red, fontSize: 16))),
+      ])),
+      if (selectedIndex!=3) Container(width: 200, color: Colors.black.withOpacity(0.5), child: _buildGroupsList()),
+      Expanded(child: Container(decoration: BoxDecoration(image: DecorationImage(image: AssetImage('assets/background.jpeg'), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.7), BlendMode.darken))), child: isLoading? Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE50914)))) : _buildContent())),
+    ]))));
   }
 
   Widget _buildMenuItem(int index, IconData icon, String title) {
     bool isSelected = selectedIndex == index && currentFocusArea == 0;
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: isSelected? Color(0xFFE50914) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        border: isSelected? Border.all(color: Colors.white, width: 3) : null,
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.white),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        onTap: () {
-          setState(() {
-            selectedIndex = index;
-            selectedGroupIndex = 0;
-            selectedItemIndex = 0;
-            currentFocusArea = 0;
-          });
-        },
-      ),
-    );
+    return Container(margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914) : Colors.transparent, borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Colors.white, width: 3) : null), child: ListTile(leading: Icon(icon, color: Colors.white), title: Text(title, style: TextStyle(color: Colors.white, fontWeight: isSelected? FontWeight.bold : FontWeight.normal)), onTap: () { setState(() { selectedIndex = index; selectedGroupIndex = 0; selectedItemIndex = 0; currentFocusArea = 0; }); }));
   }
 
   Widget _buildGroupsList() {
-    List groups = [];
-    if (selectedIndex == 0) groups = liveCategories;
-    else if (selectedIndex == 1) groups = movieCategories;
-    else if (selectedIndex == 2) groups = seriesCategories;
-
-    return ListView.builder(
-      itemCount: groups.length,
-      itemBuilder: (context, index) {
-        bool isSelected = index == selectedGroupIndex && currentFocusArea == 1;
-        return Container(
-          margin: EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: isSelected? Color(0xFFE50914) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: isSelected? Border.all(color: Colors.white, width: 3) : null,
-          ),
-          child: ListTile(
-            title: Text(
-              groups[index]['category_name']?? '',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            onTap: () {
-              setState(() {
-                selectedGroupIndex = index;
-                currentFocusArea = 1;
-              });
-              String catId = groups[index]['category_id'];
-              if (selectedIndex == 0) _loadChannels(catId);
-              else if (selectedIndex == 1) _loadMovies(catId);
-              else if (selectedIndex == 2) _loadSeries(catId);
-            },
-          ),
-        );
-      },
-    );
+    List groups = []; if (selectedIndex == 0) groups = liveCategories; else if (selectedIndex == 1) groups = movieCategories; else if (selectedIndex == 2) groups = seriesCategories;
+    return ListView.builder(itemCount: groups.length, itemBuilder: (context, index) { bool isSelected = index == selectedGroupIndex && currentFocusArea == 1; return Container(margin: EdgeInsets.all(5), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914) : Colors.transparent, borderRadius: BorderRadius.circular(8), border: isSelected? Border.all(color: Colors.white, width: 3) : null), child: ListTile(title: Text(groups[index]['category_name']?? '', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: isSelected? FontWeight.bold : FontWeight.normal)), onTap: () { setState(() { selectedGroupIndex = index; currentFocusArea = 1; }); String catId = groups[index]['category_id']; if (selectedIndex == 0) _loadChannels(catId); else if (selectedIndex == 1) _loadMovies(catId); else if (selectedIndex == 2) _loadSeries(catId); })); });
   }
 
-  Widget _buildContent() {
-    if (selectedIndex == 0) return _buildChannelsView();
-    if (selectedIndex == 1) return _buildMoviesView();
-    if (selectedIndex == 2) return _buildSeriesView();
-    if (selectedIndex == 3) return _buildFavoritesView();
-    return Container();
-  }
-
-  Widget _buildChannelsView() {
-    return channels.isEmpty
-       ? Center(child: Text('لا توجد قنوات', style: TextStyle(color: Colors.white54, fontSize: 18)))
-        : ListView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.all(15),
-            itemCount: channels.length,
-            itemBuilder: (context, index) {
-              bool isSelected = index == selectedItemIndex && currentFocusArea == 2;
-              bool isFav = favorites.any((f) => f['stream_id'] == channels[index]['stream_id']);
-              return Container(
-                margin: EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null,
-                ),
-                child: ListTile(
-                  leading: channels[index]['stream_icon']!= null
-                     ? Image.network(
-                          channels[index]['stream_icon'],
-                          width: 50,
-                          height: 50,
-                          errorBuilder: (_, __, ___) => Icon(Icons.tv, color: Colors.white),
-                        )
-                      : Icon(Icons.tv, color: Colors.white),
-                  title: Text(
-                    channels[index]['name']?? '',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: isFav? Icon(Icons.favorite, color: Colors.red) : null,
-                  onTap: () => _playItem(channels[index]),
-                ),
-              );
-            },
-          );
-  }
-
-  Widget _buildMoviesView() {
-    return movies.isEmpty
-       ? Center(child: Text('لا توجد أفلام', style: TextStyle(color: Colors.white54, fontSize: 18)))
-        : GridView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.all(15),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-            ),
-            itemCount: movies.length,
-            itemBuilder: (context, index) {
-              bool isSelected = index == selectedItemIndex && currentFocusArea == 2;
-              return GestureDetector(
-                onTap: () => _playItem(movies[index]),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: isSelected? Border.all(color: Color(0xFFE50914), width: 4) : null,
-                    boxShadow: isSelected? [BoxShadow(color: Color(0xFFE50914), blurRadius: 10)] : [],
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: movies[index]['stream_icon']!= null
-                           ? Image.network(
-                                movies[index]['stream_icon'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.grey[800],
-                                  child: Icon(Icons.movie, color: Colors.white, size: 50),
-                                ),
-                              )
-                            : Container(
-                                color: Colors.grey[800],
-                                child: Icon(Icons.movie, color: Colors.white, size: 50),
-                              ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [Colors.black.withOpacity(0.9), Colors.transparent],
-                            ),
-                          ),
-                          child: Text(
-                            movies[index]['name']?? '',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-  }
-
-  Widget _buildSeriesView() {
-    return series.isEmpty
-       ? Center(child: Text('لا توجد مسلسلات', style: TextStyle(color: Colors.white54, fontSize: 18)))
-        : GridView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.all(15),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 5,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-            ),
-            itemCount: series.length,
-            itemBuilder: (context, index) {
-              bool isSelected = index == selectedItemIndex && currentFocusArea == 2;
-              return GestureDetector(
-                onTap: () => _playItem(series[index]),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: isSelected? Border.all(color: Color(0xFFE50914), width: 4) : null,
-                    boxShadow: isSelected? [BoxShadow(color: Color(0xFFE50914), blurRadius: 10)] : [],
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: series[index]['cover']!= null
-                           ? Image.network(
-                                series[index]['cover'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.grey[800],
-                                  child: Icon(Icons.tv, color: Colors.white, size: 50),
-                                ),
-                              )
-                            : Container(
-                                color: Colors.grey[800],
-                                child: Icon(Icons.tv, color: Colors.white, size: 50),
-                              ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [Colors.black.withOpacity(0.9), Colors.transparent],
-                            ),
-                          ),
-                          child: Text(
-                            series[index]['name']?? '',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-  }
-
-  Widget _buildFavoritesView() {
-    return favorites.isEmpty
-       ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.favorite_border, color: Colors.white54, size: 80),
-                SizedBox(height: 20),
-                Text('لا توجد مفضلة', style: TextStyle(color: Colors.white54, fontSize: 18)),
-              ],
-            ),
-          )
-        : ListView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.all(15),
-            itemCount: favorites.length,
-            itemBuilder: (context, index) {
-              bool isSelected = index == selectedItemIndex && currentFocusArea == 2;
-              return Container(
-                margin: EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null,
-                ),
-                child: ListTile(
-                  leading: favorites[index]['stream_icon']!= null
-                     ? Image.network(
-                          favorites[index]['stream_icon'],
-                          width: 50,
-                          height: 50,
-                          errorBuilder: (_, __, ___) => Icon(Icons.tv, color: Colors.white),
-                        )
-                      : Icon(Icons.tv, color: Colors.white),
-                  title: Text(
-                    favorites[index]['name']?? '',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      setState(() {
-                        favorites.removeAt(index);
-                        _saveFavorites();
-                      });
-                    },
-                  ),
-                  onTap: () => _playItem(favorites[index]),
-                ),
-              );
-            },
-          );
-  }
+  Widget _buildContent() { if (selectedIndex == 0) return _buildChannelsView(); if (selectedIndex == 1) return _buildMoviesView(); if (selectedIndex == 2) return _buildSeriesView(); if (selectedIndex == 3) return _buildFavoritesView(); return Container(); }
+  Widget _buildChannelsView() { return channels.isEmpty? Center(child: Text('لا توجد قنوات', style: TextStyle(color: Colors.white54, fontSize: 18))) : ListView.builder(controller: _scrollController, padding: EdgeInsets.all(15), itemCount: channels.length, itemBuilder: (context, index) { bool isSelected = index == selectedItemIndex && currentFocusArea == 2; bool isFav = favorites.any((f) => f['stream_id'] == channels[index]['stream_id']); return Container(margin: EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null), child: ListTile(leading: channels[index]['stream_icon']!= null? Image.network(channels[index]['stream_icon'], width: 50, height: 50, errorBuilder: (_, __, ___) => Icon(Icons.tv, color: Colors.white)) : Icon(Icons.tv, color: Colors.white), title: Text(channels[index]['name']?? '', style: TextStyle(color: Colors.white, fontWeight: isSelected? FontWeight.bold : FontWeight.normal)), trailing: isFav? Icon(Icons.favorite, color: Colors.red) : null, onTap: () => _playItem(channels[index]))); }); }
+  Widget _buildMoviesView() { return movies.isEmpty? Center(child: Text('لا توجد أفلام', style: TextStyle(color: Colors.white54, fontSize: 18))) : GridView.builder(controller: _scrollController, padding: EdgeInsets.all(15), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, childAspectRatio: 0.7, crossAxisSpacing: 15, mainAxisSpacing: 15), itemCount: movies.length, itemBuilder: (context, index) { bool isSelected = index == selectedItemIndex && currentFocusArea == 2; return GestureDetector(onTap: () => _playItem(movies[index]), child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Color(0xFFE50914), width: 4) : null, boxShadow: isSelected? [BoxShadow(color: Color(0xFFE50914), blurRadius: 10)] : []), child: Stack(fit: StackFit.expand, children: [ClipRRect(borderRadius: BorderRadius.circular(10), child: movies[index]['stream_icon']!= null? Image.network(movies[index]['stream_icon'], fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey[800], child: Icon(Icons.movie, color: Colors.white, size: 50))) : Container(color: Colors.grey[800], child: Icon(Icons.movie, color: Colors.white, size: 50))), Positioned(bottom: 0, left: 0, right: 0, child: Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.9), Colors.transparent])), child: Text(movies[index]['name']?? '', style: TextStyle(color: Colors.white, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)))]))); }); }
+  Widget _buildSeriesView() { return series.isEmpty? Center(child: Text('لا توجد مسلسلات', style: TextStyle(color: Colors.white54, fontSize: 18))) : GridView.builder(controller: _scrollController, padding: EdgeInsets.all(15), gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, childAspectRatio: 0.7, crossAxisSpacing: 15, mainAxisSpacing: 15), itemCount: series.length, itemBuilder: (context, index) { bool isSelected = index == selectedItemIndex && currentFocusArea == 2; return GestureDetector(onTap: () => _playItem(series[index]), child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Color(0xFFE50914), width: 4) : null, boxShadow: isSelected? [BoxShadow(color: Color(0xFFE50914), blurRadius: 10)] : []), child: Stack(fit: StackFit.expand, children: [ClipRRect(borderRadius: BorderRadius.circular(10), child: series[index]['cover']!= null? Image.network(series[index]['cover'], fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey[800], child: Icon(Icons.tv, color: Colors.white, size: 50))) : Container(color: Colors.grey[800], child: Icon(Icons.tv, color: Colors.white, size: 50))), Positioned(bottom: 0, left: 0, right: 0, child: Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.9), Colors.transparent])), child: Text(series[index]['name']?? '', style: TextStyle(color: Colors.white, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)))]))); }); }
+  Widget _buildFavoritesView() { return favorites.isEmpty? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.favorite_border, color: Colors.white54, size: 80), SizedBox(height: 20), Text('لا توجد مفضلة', style: TextStyle(color: Colors.white54, fontSize: 18))])) : ListView.builder(controller: _scrollController, padding: EdgeInsets.all(15), itemCount: favorites.length, itemBuilder: (context, index) { bool isSelected = index == selectedItemIndex && currentFocusArea == 2; return Container(margin: EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null), child: ListTile(leading: favorites[index]['stream_icon']!= null? Image.network(favorites[index]['stream_icon'], width: 50, height: 50, errorBuilder: (_, __, ___) => Icon(Icons.tv, color: Colors.white)) : Icon(Icons.tv, color: Colors.white), title: Text(favorites[index]['name']?? '', style: TextStyle(color: Colors.white, fontWeight: isSelected? FontWeight.bold : FontWeight.normal)), trailing: IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () { setState(() { favorites.removeAt(index); _saveFavorites(); }); }), onTap: () => _playItem(favorites[index]))); }); }
 }
 
 class SeriesDetailsScreen extends StatefulWidget {
-  final String server;
-  final String username;
-  final String password;
-  final Map series;
-
-  SeriesDetailsScreen({
-    required this.server,
-    required this.username,
-    required this.password,
-    required this.series,
-  });
-
-  @override
-  _SeriesDetailsScreenState createState() => _SeriesDetailsScreenState();
+  final String server; final String username; final String password; final Map series;
+  SeriesDetailsScreen({required this.server, required this.username, required this.password, required this.series});
+  @override _SeriesDetailsScreenState createState() => _SeriesDetailsScreenState();
 }
-
 class _SeriesDetailsScreenState extends State<SeriesDetailsScreen> {
-  List seasons = [];
-  List episodes = [];
-  int selectedSeason = 0;
-  int selectedEpisodeIndex = 0;
-  bool isLoading = true;
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSeasons();
-  }
-
-  _loadSeasons() async {
-    try {
-      final res = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_info&series_id=${widget.series['series_id']}'
-      ));
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        setState(() {
-          seasons = data['seasons']?? [];
-          if (seasons.isNotEmpty) {
-            _loadEpisodes(seasons[0]['season_number']);
-          } else {
-            isLoading = false;
-          }
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
-  }
-
-  _loadEpisodes(int seasonNum) async {
-    setState(() => isLoading = true);
-    try {
-      final res = await http.get(Uri.parse(
-        '${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_info&series_id=${widget.series['series_id']}'
-      ));
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body);
-        setState(() {
-          episodes = data['episodes']['$seasonNum']?? [];
-          isLoading = false;
-          selectedEpisodeIndex = 0;
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-    }
-  }
-
-  void _handleKey(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        setState(() {
-          if (selectedEpisodeIndex < episodes.length - 1) {
-            selectedEpisodeIndex++;
-            _scrollToSelected();
-          }
-        });
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        setState(() {
-          if (selectedEpisodeIndex > 0) {
-            selectedEpisodeIndex--;
-            _scrollToSelected();
-          }
-        });
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        if (selectedSeason > 0) {
-          setState(() {
-            selectedSeason--;
-            _loadEpisodes(seasons[selectedSeason]['season_number']);
-          });
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        if (selectedSeason < seasons.length - 1) {
-          setState(() {
-            selectedSeason++;
-            _loadEpisodes(seasons[selectedSeason]['season_number']);
-          });
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.select ||
-                 event.logicalKey == LogicalKeyboardKey.enter ||
-                 event.logicalKey == LogicalKeyboardKey.gameButtonA) {
-        if (episodes.isNotEmpty) _playEpisode(episodes[selectedEpisodeIndex]);
-      } else if (event.logicalKey == LogicalKeyboardKey.goBack ||
-                 event.logicalKey == LogicalKeyboardKey.escape) {
-        Navigator.pop(context);
-      }
-    }
-  }
-
-  void _scrollToSelected() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        selectedEpisodeIndex * 80.0,
-        duration: Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _playEpisode(Map episode) {
-    String url = '${widget.server}/series/${widget.username}/${widget.password}/${episode['id']}.${episode['container_extension']}';
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TvPlayerScreen(
-          videoUrl: url,
-          channelName: '${widget.series['name']} - ${episode['title']}',
-          server: widget.server,
-          username: widget.username,
-          password: widget.password,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFF0D1B2A),
-      body: Focus(
-        autofocus: true,
-        onKeyEvent: (node, event) {
-          _handleKey(event);
-          return KeyEventResult.handled;
-        },
-        child: isLoading
-           ? Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE50914)),
-                ),
-              )
-            : Row(
-                children: [
-                  Container(
-                    width: 300,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      image: DecorationImage(
-                        image: NetworkImage(widget.series['cover']?? ''),
-                        fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(
-                          Colors.black.withOpacity(0.7),
-                          BlendMode.darken,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.series['name']?? '',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Text(
-                                widget.series['plot']?? '',
-                                style: TextStyle(color: Colors.white70, fontSize: 14),
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                'المواسم',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Container(
-                                height: 50,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: seasons.length,
-                                  itemBuilder: (context, index) {
-                                    bool isSelected = index == selectedSeason;
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedSeason = index;
-                                          _loadEpisodes(seasons[index]['season_number']);
-                                        });
-                                      },
-                                      child: Container(
-                                        margin: EdgeInsets.only(right: 10),
-                                        padding: EdgeInsets.symmetric(horizontal: 20),
-                                        decoration: BoxDecoration(
-                                          color: isSelected? Color(0xFFE50914) : Colors.white.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(25),
-                                          border: isSelected? Border.all(color: Colors.white, width: 2) : null,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: Text(
-                                          'الموسم ${seasons[index]['season_number']}',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(
-                      color: Color(0xFF0D1B2A),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text(
-                              'الحلقات',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: episodes.isEmpty
-                               ? Center(
-                                    child: Text(
-                                      'لا توجد حلقات',
-                                      style: TextStyle(color: Colors.white54, fontSize: 18),
-                                    ),
-                                  )
-                                : ListView.builder(
-                                    controller: _scrollController,
-                                    padding: EdgeInsets.symmetric(horizontal: 20),
-                                    itemCount: episodes.length,
-                                    itemBuilder: (context, index) {
-                                      bool isSelected = index == selectedEpisodeIndex;
-                                      return Container(
-                                        margin: EdgeInsets.only(bottom: 10),
-                                        decoration: BoxDecoration(
-                                          color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null,
-                                        ),
-                                        child: ListTile(
-                                          leading: Container(
-                                            width: 60,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: Color(0xFFE50914),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              '${index + 1}',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                          title: Text(
-                                            episodes[index]['title']?? 'الحلقة ${index + 1}',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            episodes[index]['info']?['plot']?? '',
-                                            style: TextStyle(color: Colors.white54, fontSize: 12),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          trailing: Icon(Icons.play_arrow, color: Colors.white, size: 30),
-                                          onTap: () => _playEpisode(episodes[index]),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
+  List seasons = []; List episodes = []; int selectedSeason = 0; int selectedEpisodeIndex = 0; bool isLoading = true; final ScrollController _scrollController = ScrollController();
+  @override void initState() { super.initState(); _loadSeasons(); }
+  _loadSeasons() async { try { final res = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_info&series_id=${widget.series['series_id']}')); if (res.statusCode == 200) { final data = json.decode(res.body); setState(() { seasons = data['seasons']?? []; if (seasons.isNotEmpty) { _loadEpisodes(seasons[0]['season_number']); } else { isLoading = false; } }); } } catch (e) { setState(() => isLoading = false); } }
+  _loadEpisodes(int seasonNum) async { setState(() => isLoading = true); try { final res = await http.get(Uri.parse('${widget.server}/player_api.php?username=${widget.username}&password=${widget.password}&action=get_series_info&series_id=${widget.series['series_id']}')); if (res.statusCode == 200) { final data = json.decode(res.body); setState(() { episodes = data['episodes']['$seasonNum']?? []; isLoading = false; selectedEpisodeIndex = 0; }); } } catch (e) { setState(() => isLoading = false); } }
+  void _handleKey(KeyEvent event) { if (event is KeyDownEvent) { if (event.logicalKey == LogicalKeyboardKey.arrowDown) { setState(() { if (selectedEpisodeIndex < episodes.length - 1) { selectedEpisodeIndex++; _scrollToSelected(); } }); } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) { setState(() { if (selectedEpisodeIndex > 0) { selectedEpisodeIndex--; _scrollToSelected(); } }); } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) { if (selectedSeason > 0) { setState(() { selectedSeason--; _loadEpisodes(seasons[selectedSeason]['season_number']); }); } } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) { if (selectedSeason < seasons.length - 1) { setState(() { selectedSeason++; _loadEpisodes(seasons[selectedSeason]['season_number']); }); } } else if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.gameButtonA) { if (episodes.isNotEmpty) _playEpisode(episodes[selectedEpisodeIndex]); } else if (event.logicalKey == LogicalKeyboardKey.goBack || event.logicalKey == LogicalKeyboardKey.escape) { Navigator.pop(context); } } }
+  void _scrollToSelected() { if (_scrollController.hasClients) { _scrollController.animateTo(selectedEpisodeIndex * 80.0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut); } }
+  void _playEpisode(Map episode) { String url = '${widget.server}/series/${widget.username}/${widget.password}/${episode['id']}.${episode['container_extension']}'; Navigator.push(context, MaterialPageRoute(builder: (_) => TvPlayerScreen(videoUrl: url, channelName: '${widget.series['name']} - ${episode['title']}', server: widget.server, username: widget.username, password: widget.password))); }
+  @override Widget build(BuildContext context) { return Scaffold(backgroundColor: Color(0xFF0D1B2A), body: Focus(autofocus: true, onKeyEvent: (n,e){_handleKey(e);return KeyEventResult.handled;}, child: isLoading? Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE50914)))) : Row(children: [Container(width: 300, decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), image: DecorationImage(image: NetworkImage(widget.series['cover']?? ''), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.7), BlendMode.darken))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [IconButton(icon: Icon(Icons.arrow_back, color: Colors.white, size: 30), onPressed: () => Navigator.pop(context)), Padding(padding: EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.series['name']?? '', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)), SizedBox(height: 10), Text(widget.series['plot']?? '', style: TextStyle(color: Colors.white70, fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis), SizedBox(height: 20), Text('المواسم', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)), SizedBox(height: 10), Container(height: 50, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: seasons.length, itemBuilder: (context, index) { bool isSelected = index == selectedSeason; return GestureDetector(onTap: () { setState(() { selectedSeason = index; _loadEpisodes(seasons[index]['season_number']); }); }, child: Container(margin: EdgeInsets.only(right: 10), padding: EdgeInsets.symmetric(horizontal: 20), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914) : Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(25), border: isSelected? Border.all(color: Colors.white, width: 2) : null), alignment: Alignment.center, child: Text('الموسم ${seasons[index]['season_number']}', style: TextStyle(color: Colors.white, fontWeight: isSelected? FontWeight.bold : FontWeight.normal))))); }))]))])), Expanded(child: Container(color: Color(0xFF0D1B2A), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: EdgeInsets.all(20), child: Text('الحلقات', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))), Expanded(child: episodes.isEmpty? Center(child: Text('لا توجد حلقات', style: TextStyle(color: Colors.white54, fontSize: 18))) : ListView.builder(controller: _scrollController, padding: EdgeInsets.symmetric(horizontal: 20), itemCount: episodes.length, itemBuilder: (context, index) { bool isSelected = index == selectedEpisodeIndex; return Container(margin: EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: isSelected? Color(0xFFE50914).withOpacity(0.3) : Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10), border: isSelected? Border.all(color: Color(0xFFE50914), width: 3) : null), child: ListTile(leading: Container(width: 60, height: 60, decoration: BoxDecoration(color: Color(0xFFE50914), borderRadius: BorderRadius.circular(8)), alignment: Alignment.center, child: Text('${index + 1}', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))), title: Text(episodes[index]['title']?? 'الحلقة ${index + 1}', style: TextStyle(color: Colors.white, fontWeight: isSelected? FontWeight.bold : FontWeight.normal)), subtitle: Text(episodes[index]['info']?['plot']?? '', style: TextStyle(color: Colors.white54, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis), trailing: Icon(Icons.play_arrow, color: Colors.white, size: 30), onTap: () => _playEpisode(episodes[index]))); }))])))])))); }
 }
