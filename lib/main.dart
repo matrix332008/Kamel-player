@@ -81,7 +81,18 @@ class _LoginPageState extends State<LoginPage> {
       builder: (_) => AlertDialog(
         backgroundColor: Colors.black,
         title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: TextField(controller: c, obscureText: obs, autofocus: true, style: const TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: c,
+          obscureText: obs,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.pop(context, c.text),
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2)),
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           TextButton(onPressed: () => Navigator.pop(context, c.text), child: const Text('OK', style: TextStyle(color: Colors.red))),
@@ -361,9 +372,7 @@ class _PlayerPageState extends State<PlayerPage> {
           if (e is RawKeyDownEvent) {
             if (e.logicalKey == LogicalKeyboardKey.arrowUp) { _next(); return KeyEventResult.handled; }
             if (e.logicalKey == LogicalKeyboardKey.arrowDown) { _prev(); return KeyEventResult.handled; }
-            if (e.logicalKey == LogicalKeyboardKey.select) { return KeyEventResult.handled; }
             if (e.logicalKey == LogicalKeyboardKey.goBack) { Navigator.pop(context); return KeyEventResult.handled; }
-          }
           return KeyEventResult.ignored;
         },
         child: Stack(children: [
