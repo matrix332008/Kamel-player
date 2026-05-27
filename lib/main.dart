@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:better_player/better_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -170,22 +171,37 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  // خانة بيضاء مع تنقل فوق/لوطة
   Widget _input(TextEditingController c, String hint, IconData icon, [bool auto = false, bool obscure = false]) {
-    return TextField(
-      controller: c,
-      obscureText: obscure,
-      autofocus: auto,
-      style: const TextStyle(color: Colors.black),
-      textInputAction: TextInputAction.next,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.red),
-        filled: true,
-        fillColor: Colors.white, // <-- بيضاء
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.red, width: 2),
+    return Focus(
+      onKey: (node, event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            FocusScope.of(context).nextFocus();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            FocusScope.of(context).previousFocus();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: TextField(
+        controller: c,
+        obscureText: obscure,
+        autofocus: auto,
+        style: const TextStyle(color: Colors.black),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Colors.red),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.red, width: 3),
+          ),
         ),
       ),
     );
@@ -286,7 +302,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.black,
       body: Row(
         children: [
-          // sidebar
+          // القائمة اليسار
           Container(
             width: 250,
             color: const Color(0xFF0D1B5C),
@@ -297,18 +313,24 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 10),
                 Text(user, style: const TextStyle(color: Colors.white)),
                 const Divider(color: Colors.white24, height: 30),
-               ...List.generate(menus.length, (i) => Container(
-                      color: menu == i? Colors.red : Colors.transparent,
-                      child: ListTile(
-                        leading: Icon(menus[i]['i'] as IconData, color: Colors.white),
-                        title: Text(menus[i]['t'] as String, style: const TextStyle(color: Colors.white)),
-                        onTap: () { setState(() => menu = i); _loadCats(); },
+               ...List.generate(menus.length, (i) => Focus(
+                      onFocusChange: (hasFocus) {
+                        if (hasFocus) setState(() => menu = i);
+                      },
+                      child: Container(
+                        color: menu == i? Colors.red : Colors.transparent,
+                        child: ListTile(
+                          autofocus: i == 0,
+                          leading: Icon(menus[i]['i'] as IconData, color: Colors.white),
+                          title: Text(menus[i]['t'] as String, style: const TextStyle(color: Colors.white)),
+                          onTap: () { setState(() => menu = i); _loadCats(); },
+                        ),
                       ),
                     )),
               ],
             ),
           ),
-          // categories
+          // التصنيفات
           Container(
             width: 220,
             color: Colors.black,
@@ -329,7 +351,7 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
           ),
-          // channels
+          // القنوات
           Expanded(
             child: loading
                ? const Center(child: CircularProgressIndicator())
@@ -350,9 +372,10 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             children: [
                               Expanded(
-                                child: icon!= ''? Image.network(icon, fit: BoxFit.cover, width: double.infinity,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.tv, color: Colors.white))
-                                  : const Icon(Icons.tv, color: Colors.white),
+                                child: icon!= ''
+                                   ? Image.network(icon, fit: BoxFit.cover, width: double.infinity,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.tv, color: Colors.white))
+                                    : const Icon(Icons.tv, color: Colors.white),
                               ),
                               Padding(
                                 padding: const EdgeInsets.all(4),
@@ -391,6 +414,9 @@ class _PlayerPageState extends State<PlayerPage> {
       const BetterPlayerConfiguration(
         autoPlay: true,
         fit: BoxFit.contain,
+        controlsConfiguration: BetterPlayerControlsConfiguration(
+          showControls: false, // بلا ضبابة
+        ),
       ),
       betterPlayerDataSource: BetterPlayerDataSource(
         BetterPlayerDataSourceType.network,
