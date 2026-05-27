@@ -51,6 +51,7 @@ class _SplashState extends State<Splash> {
   }
 }
 
+// ---------- LOGIN مصلح ----------
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
   @override
@@ -111,6 +112,7 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ElevatedButton(
+                      autofocus: true,
                       onPressed: () => setState(() => isXtream = true),
                       style: ElevatedButton.styleFrom(backgroundColor: isXtream? Colors.red : Colors.grey[800]),
                       child: const Text('Xtream Codes'),
@@ -129,11 +131,11 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     children: [
                       if (isXtream)...[
-                        _field(s, 'رابط السيرفر', Icons.dns, true),
+                        _field(s, 'رابط السيرفر', Icons.dns),
                         const SizedBox(height: 12),
                         _field(u, 'اسم المستخدم', Icons.person),
                         const SizedBox(height: 12),
-                        _field(p, 'كلمة المرور', Icons.lock, false, true),
+                        _field(p, 'كلمة المرور', Icons.lock, true),
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
@@ -145,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ] else...[
-                        _field(m, 'رابط M3U', Icons.link, true),
+                        _field(m, 'رابط M3U', Icons.link),
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
@@ -168,12 +170,12 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _field(TextEditingController c, String hint, IconData icon, [bool auto = false, bool obs = false]) {
+  Widget _field(TextEditingController c, String hint, IconData icon, [bool obs = false]) {
     return TextField(
       controller: c,
       obscureText: obs,
-      autofocus: auto,
       style: const TextStyle(color: Colors.black),
+      onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: Colors.red),
@@ -189,6 +191,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// ---------- HOME ----------
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -388,6 +391,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// ---------- PLAYER ----------
 class PlayerPage extends StatefulWidget {
   final List streams;
   final int index;
@@ -472,7 +476,7 @@ class _PlayerPageState extends State<PlayerPage> {
               duration: const Duration(milliseconds: 300),
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.transparent, Colors.black54]),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent, Colors.black54]),
                 ),
                 child: Stack(
                   children: [
