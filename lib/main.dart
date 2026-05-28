@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:better_player/better_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 void main() {
   runApp(const KamelTVApp());
@@ -103,12 +104,10 @@ class _LoginPageState extends State<LoginPage> {
           controller: c,
           obscureText: obs,
           autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.pop(context, c.text),
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            enabledBorder:
-                UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.red)),
             focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.red, width: 2)),
           ),
@@ -246,8 +245,6 @@ class _LoginPageState extends State<LoginPage> {
                   child: Text(
                     c.text.isEmpty? h : (obs? '••••••' : c.text),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: c.text.isEmpty? Colors.grey : Colors.black),
                   ),
                 ),
               ],
@@ -346,7 +343,6 @@ class _HomePageState extends State<HomePage> {
         '$server/player_api.php?username=$user&password=$pass&action=$act&category_id=$catId'));
     final data = json.decode(utf8.decode(r.bodyBytes));
 
-    // === جديد: جلب عدد الحلقات للمسلسلات ===
     if (menu == 2) {
       List enriched = [];
       for (var s in data) {
@@ -610,10 +606,11 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _play() {
+    WakelockPlus.enable(); // يمنع الـ veille
     ctrl = BetterPlayerController(
       const BetterPlayerConfiguration(
         autoPlay: true,
-        fit: BoxFit.cover, // كان contain - تو يملا الشاشة
+        fit: BoxFit.cover,
         controlsConfiguration:
             BetterPlayerControlsConfiguration(showControls: false),
       ),
@@ -675,6 +672,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    WakelockPlus.disable(); // يرجع الـ veille
     ctrl.dispose();
     t?.cancel();
     super.dispose();
@@ -685,7 +683,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final s = widget.streams[idx];
     return PopScope(
       canPop: true,
-      onPopInvoked: (_) => ctrl.dispose(),
+      onPopInvoked: (_) => WakelockPlus.disable(),
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Focus(
@@ -737,8 +735,8 @@ class _PlayerPageState extends State<PlayerPage> {
                         right: 20,
                         child: Text(
                           _time(),
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 16),
+                          style:
+                              const TextStyle(color: Colors.white, fontSize: 16),
                         ),
                       ),
                       Positioned(
