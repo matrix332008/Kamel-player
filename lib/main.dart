@@ -314,7 +314,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       cats = data;
       loading = false;
-      // ما عادش نفرغ streams هنا
     });
   }
 
@@ -346,10 +345,37 @@ class _HomePageState extends State<HomePage> {
     final r = await http.get(Uri.parse(
         '$server/player_api.php?username=$user&password=$pass&action=$act&category_id=$catId'));
     final data = json.decode(utf8.decode(r.bodyBytes));
-    setState(() {
-      streams = data;
-      loading = false;
-    });
+
+    // === جديد: جلب عدد الحلقات للمسلسلات ===
+    if (menu == 2) {
+      List enriched = [];
+      for (var s in data) {
+        try {
+          final infoR = await http.get(Uri.parse(
+              '$server/player_api.php?username=$user&password=$pass&action=get_series_info&series_id=${s['series_id']}'));
+          final info = json.decode(utf8.decode(infoR.bodyBytes));
+          int count = 0;
+          if (info['episodes']!= null) {
+            (info['episodes'] as Map).forEach((k, v) {
+              count += (v as List).length;
+            });
+          }
+          s['episode_count'] = count;
+        } catch (_) {
+          s['episode_count'] = 0;
+        }
+        enriched.add(s);
+      }
+      setState(() {
+        streams = enriched;
+        loading = false;
+      });
+    } else {
+      setState(() {
+        streams = data;
+        loading = false;
+      });
+    }
   }
 
   String _url(m) {
@@ -527,12 +553,24 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.all(3),
-                                  child: Text(
-                                    name,
-                                    maxLines: 2,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 11),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 11),
+                                      ),
+                                      if (menu == 2 &&
+                                          s['episode_count']!= null)
+                                        Text(
+                                          '${s['episode_count']} حلقة',
+                                          style: const TextStyle(
+                                              color: Colors.grey, fontSize: 9),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -575,7 +613,7 @@ class _PlayerPageState extends State<PlayerPage> {
     ctrl = BetterPlayerController(
       const BetterPlayerConfiguration(
         autoPlay: true,
-        fit: BoxFit.contain,
+        fit: BoxFit.cover, // كان contain - تو يملا الشاشة
         controlsConfiguration:
             BetterPlayerControlsConfiguration(showControls: false),
       ),
@@ -645,80 +683,84 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   Widget build(BuildContext context) {
     final s = widget.streams[idx];
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Focus(
-        autofocus: true,
-        onKey: (n, e) {
-          if (e is RawKeyDownEvent) {
-            if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-              _prev();
-              return KeyEventResult.handled;
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (_) => ctrl.dispose(),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Focus(
+          autofocus: true,
+          onKey: (n, e) {
+            if (e is RawKeyDownEvent) {
+              if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
+                _prev();
+                return KeyEventResult.handled;
+              }
+              if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
+                _next();
+                return KeyEventResult.handled;
+              }
+              if (e.logicalKey == LogicalKeyboardKey.select) {
+                _list();
+                return KeyEventResult.handled;
+              }
+              if (e.logicalKey == LogicalKeyboardKey.goBack ||
+                  e.logicalKey == LogicalKeyboardKey.escape) {
+                Navigator.pop(context);
+                return KeyEventResult.handled;
+              }
             }
-            if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _next();
-              return KeyEventResult.handled;
-            }
-            if (e.logicalKey == LogicalKeyboardKey.select) {
-              _list();
-              return KeyEventResult.handled;
-            }
-            if (e.logicalKey == LogicalKeyboardKey.goBack ||
-                e.logicalKey == LogicalKeyboardKey.escape) {
-              Navigator.pop(context);
-              return KeyEventResult.handled;
-            }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Stack(
-          children: [
-            BetterPlayer(controller: ctrl),
-            AnimatedOpacity(
-              opacity: show? 1 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black54,
-                      Colors.transparent,
-                      Colors.black54
+            return KeyEventResult.ignored;
+          },
+          child: Stack(
+            children: [
+              BetterPlayer(controller: ctrl),
+              AnimatedOpacity(
+                opacity: show? 1 : 0,
+                duration: const Duration(milliseconds: 300),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black54,
+                        Colors.transparent,
+                        Colors.black54
+                      ],
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 20,
+                        right: 20,
+                        child: Text(
+                          _time(),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 30,
+                        left: 20,
+                        right: 20,
+                        child: Text(
+                          '${idx + 1} - ${s['name']}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 20,
-                      right: 20,
-                      child: Text(
-                        _time(),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 16),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 30,
-                      left: 20,
-                      right: 20,
-                      child: Text(
-                        '${idx + 1} - ${s['name']}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
