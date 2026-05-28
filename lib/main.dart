@@ -313,8 +313,8 @@ class _HomePageState extends State<HomePage> {
     final data = json.decode(utf8.decode(r.bodyBytes));
     setState(() {
       cats = data;
-      streams = [];
       loading = false;
+      // ما عادش نفرغ streams هنا
     });
   }
 
@@ -366,7 +366,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.black,
       body: Row(
         children: [
-          // LEFT MENU
+          // LEFT
           Container(
             width: 240,
             color: const Color(0xFF0D1B5C),
@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> {
                ...List.generate(menus.length, (i) {
                   return Focus(
                     onFocusChange: (f) {
-                      if (f) {
+                      if (f && menu!= i) {
                         setState(() => menu = i);
                         _loadCats();
                       }
@@ -428,27 +428,33 @@ class _HomePageState extends State<HomePage> {
                           }
                           return KeyEventResult.ignored;
                         },
-                        child: InkWell(
-                          onTap: () {
-                            setState(() => catId = b['category_id']);
-                            _loadStreams();
-                          },
-                          child: Container(
-                            color: sel
-                               ? Colors.red.shade800
-                                : Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 10),
-                            child: Text(
-                              b['category_name']?? '',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight:
-                                    sel? FontWeight.bold : FontWeight.normal,
+                        child: Builder(builder: (ctx) {
+                          final has = Focus.of(ctx).hasFocus;
+                          return InkWell(
+                            onTap: () {
+                              setState(() => catId = b['category_id']);
+                              _loadStreams();
+                            },
+                            child: Container(
+                              color: sel
+                                 ? Colors.red.shade800
+                                  : has
+                                     ? Colors.white24
+                                      : Colors.transparent,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 10),
+                              child: Text(
+                                b['category_name']?? '',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: sel
+                                     ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        }),
                       );
                     },
                   ),
@@ -657,7 +663,8 @@ class _PlayerPageState extends State<PlayerPage> {
               _list();
               return KeyEventResult.handled;
             }
-            if (e.logicalKey == LogicalKeyboardKey.goBack) {
+            if (e.logicalKey == LogicalKeyboardKey.goBack ||
+                e.logicalKey == LogicalKeyboardKey.escape) {
               Navigator.pop(context);
               return KeyEventResult.handled;
             }
