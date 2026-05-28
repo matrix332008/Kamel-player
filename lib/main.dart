@@ -41,7 +41,7 @@ class _SplashState extends State<Splash> {
         context,
         MaterialPageRoute(
           builder: (_) => p.getString('type') == null
-            ? const LoginPage()
+           ? const LoginPage()
               : const HomePage(),
         ),
       );
@@ -170,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () => setState(() => isXtream = false),
                     style: ElevatedButton.styleFrom(
                         backgroundColor:
-                          !isXtream? Colors.deepPurple : Colors.grey[800]),
+                         !isXtream? Colors.deepPurple : Colors.grey[800]),
                     child: const Text('M3U'),
                   ),
                 ],
@@ -303,9 +303,9 @@ class _HomePageState extends State<HomePage> {
     }
     setState(() => loading = true);
     final act = menu == 0
-      ? 'get_live_categories'
+     ? 'get_live_categories'
         : menu == 1
-          ? 'get_vod_categories'
+         ? 'get_vod_categories'
             : 'get_series_categories';
     final r = await http.get(Uri.parse(
         '$server/player_api.php?username=$user&password=$pass&action=$act'));
@@ -337,43 +337,19 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     final act = menu == 0
-      ? 'get_live_streams'
+     ? 'get_live_streams'
         : menu == 1
-          ? 'get_vod_streams'
+         ? 'get_vod_streams'
             : 'get_series';
     final r = await http.get(Uri.parse(
         '$server/player_api.php?username=$user&password=$pass&action=$act&category_id=$catId'));
     final data = json.decode(utf8.decode(r.bodyBytes));
 
-    if (menu == 2) {
-      List enriched = [];
-      for (var s in data) {
-        try {
-          final infoR = await http.get(Uri.parse(
-              '$server/player_api.php?username=$user&password=$pass&action=get_series_info&series_id=${s['series_id']}'));
-          final info = json.decode(utf8.decode(infoR.bodyBytes));
-          int count = 0;
-          if (info['episodes']!= null) {
-            (info['episodes'] as Map).forEach((k, v) {
-              count += (v as List).length;
-            });
-          }
-          s['episode_count'] = count;
-        } catch (_) {
-          s['episode_count'] = 0;
-        }
-        enriched.add(s);
-      }
-      setState(() {
-        streams = enriched;
-        loading = false;
-      });
-    } else {
-      setState(() {
-        streams = data;
-        loading = false;
-      });
-    }
+    // تم حذف لوب عدد الحلقات اللي كان يعلق التطبيق
+    setState(() {
+      streams = data;
+      loading = false;
+    });
   }
 
   String _url(m) {
@@ -402,7 +378,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 Text(user, style: const TextStyle(color: Colors.white)),
                 const Divider(color: Colors.white24),
-              ...List.generate(menus.length, (i) {
+             ...List.generate(menus.length, (i) {
                   return Focus(
                     onFocusChange: (f) {
                       if (f && menu!= i) {
@@ -433,7 +409,7 @@ class _HomePageState extends State<HomePage> {
             width: 200,
             color: Colors.black,
             child: loading
-              ? const Center(child: CircularProgressIndicator())
+             ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
                     itemCount: cats.length,
                     itemBuilder: (_, i) {
@@ -459,9 +435,9 @@ class _HomePageState extends State<HomePage> {
                             },
                             child: Container(
                               color: sel
-                                ? Colors.red.shade800
+                               ? Colors.red.shade800
                                   : has
-                                    ? Colors.white24
+                                   ? Colors.white24
                                       : Colors.transparent,
                               padding: const EdgeInsets.symmetric(
                                   vertical: 12, horizontal: 10),
@@ -470,7 +446,7 @@ class _HomePageState extends State<HomePage> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: sel
-                                    ? FontWeight.bold
+                                   ? FontWeight.bold
                                       : FontWeight.normal,
                                 ),
                               ),
@@ -483,7 +459,7 @@ class _HomePageState extends State<HomePage> {
           ),
           Expanded(
             child: loading
-              ? const Center(child: CircularProgressIndicator())
+             ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
                     padding: const EdgeInsets.all(8),
                     gridDelegate:
@@ -504,13 +480,13 @@ class _HomePageState extends State<HomePage> {
                           if (e is RawKeyDownEvent &&
                               e.logicalKey == LogicalKeyboardKey.select) {
                             final list = streams
-                              .map((e) => {
+                             .map((e) => {
                                       'name': e['name']?? e['title']?? '',
                                       'url': type == 'm3u'
-                                        ? e['url']
+                                       ? e['url']
                                           : _url(e)
                                     })
-                              .toList();
+                             .toList();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -536,7 +512,7 @@ class _HomePageState extends State<HomePage> {
                               children: [
                                 Expanded(
                                   child: icon!= ''
-                                    ? Image.network(
+                                   ? Image.network(
                                           icon,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
@@ -548,24 +524,13 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.all(3),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 11),
-                                      ),
-                                      if (menu == 2 &&
-                                          s['episode_count']!= null)
-                                        Text(
-                                          '${s['episode_count']} حلقة',
-                                          style: const TextStyle(
-                                              color: Colors.grey, fontSize: 9),
-                                        ),
-                                    ],
+                                  child: Text(
+                                    name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 11),
                                   ),
                                 ),
                               ],
