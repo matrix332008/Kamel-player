@@ -41,7 +41,7 @@ class _SplashState extends State<Splash> {
         context,
         MaterialPageRoute(
           builder: (_) => p.getString('type') == null
-             ? const LoginPage()
+            ? const LoginPage()
               : const HomePage(),
         ),
       );
@@ -104,6 +104,8 @@ class _LoginPageState extends State<LoginPage> {
           controller: c,
           obscureText: obs,
           autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => Navigator.pop(context, c.text),
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             enabledBorder: UnderlineInputBorder(
@@ -168,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () => setState(() => isXtream = false),
                     style: ElevatedButton.styleFrom(
                         backgroundColor:
-                           !isXtream? Colors.deepPurple : Colors.grey[800]),
+                          !isXtream? Colors.deepPurple : Colors.grey[800]),
                     child: const Text('M3U'),
                   ),
                 ],
@@ -301,9 +303,9 @@ class _HomePageState extends State<HomePage> {
     }
     setState(() => loading = true);
     final act = menu == 0
-       ? 'get_live_categories'
+      ? 'get_live_categories'
         : menu == 1
-           ? 'get_vod_categories'
+          ? 'get_vod_categories'
             : 'get_series_categories';
     final r = await http.get(Uri.parse(
         '$server/player_api.php?username=$user&password=$pass&action=$act'));
@@ -335,9 +337,9 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     final act = menu == 0
-       ? 'get_live_streams'
+      ? 'get_live_streams'
         : menu == 1
-           ? 'get_vod_streams'
+          ? 'get_vod_streams'
             : 'get_series';
     final r = await http.get(Uri.parse(
         '$server/player_api.php?username=$user&password=$pass&action=$act&category_id=$catId'));
@@ -388,7 +390,6 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.black,
       body: Row(
         children: [
-          // LEFT
           Container(
             width: 240,
             color: const Color(0xFF0D1B5C),
@@ -401,7 +402,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 Text(user, style: const TextStyle(color: Colors.white)),
                 const Divider(color: Colors.white24),
-               ...List.generate(menus.length, (i) {
+              ...List.generate(menus.length, (i) {
                   return Focus(
                     onFocusChange: (f) {
                       if (f && menu!= i) {
@@ -428,12 +429,11 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          // BOUQUETS
           Container(
             width: 200,
             color: Colors.black,
             child: loading
-               ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
                     itemCount: cats.length,
                     itemBuilder: (_, i) {
@@ -459,9 +459,9 @@ class _HomePageState extends State<HomePage> {
                             },
                             child: Container(
                               color: sel
-                                 ? Colors.red.shade800
+                                ? Colors.red.shade800
                                   : has
-                                     ? Colors.white24
+                                    ? Colors.white24
                                       : Colors.transparent,
                               padding: const EdgeInsets.symmetric(
                                   vertical: 12, horizontal: 10),
@@ -470,7 +470,7 @@ class _HomePageState extends State<HomePage> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: sel
-                                     ? FontWeight.bold
+                                    ? FontWeight.bold
                                       : FontWeight.normal,
                                 ),
                               ),
@@ -481,10 +481,9 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
           ),
-          // STREAMS
           Expanded(
             child: loading
-               ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
                 : GridView.builder(
                     padding: const EdgeInsets.all(8),
                     gridDelegate:
@@ -505,13 +504,13 @@ class _HomePageState extends State<HomePage> {
                           if (e is RawKeyDownEvent &&
                               e.logicalKey == LogicalKeyboardKey.select) {
                             final list = streams
-                               .map((e) => {
+                              .map((e) => {
                                       'name': e['name']?? e['title']?? '',
                                       'url': type == 'm3u'
-                                         ? e['url']
+                                        ? e['url']
                                           : _url(e)
                                     })
-                               .toList();
+                              .toList();
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -537,7 +536,7 @@ class _HomePageState extends State<HomePage> {
                               children: [
                                 Expanded(
                                   child: icon!= ''
-                                     ? Image.network(
+                                    ? Image.network(
                                           icon,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
@@ -606,7 +605,7 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _play() {
-    WakelockPlus.enable(); // يمنع الـ veille
+    WakelockPlus.enable();
     ctrl = BetterPlayerController(
       const BetterPlayerConfiguration(
         autoPlay: true,
@@ -672,7 +671,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
-    WakelockPlus.disable(); // يرجع الـ veille
+    WakelockPlus.disable();
     ctrl.dispose();
     t?.cancel();
     super.dispose();
