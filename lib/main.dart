@@ -38,7 +38,7 @@ class _SplashProState extends State<SplashPro> {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => has? HomePro() : LoginPro()));
   }
   @override Widget build(BuildContext context){
-    return Scaffold(body: Container(decoration: BoxDecoration(gradient: LinearGradient(colors:[Color(0xFF1a1a4a), Color(0xFF0B0E2A)], begin: Alignment.topLeft, end: Alignment.bottomRight)), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children:[ Image.asset('assets/icon.png', width:140), SizedBox(height:20), Text('Kamel TV', style: TextStyle(fontSize:32, fontWeight: FontWeight.bold, color: Colors.white)), SizedBox(height:8), Text('PRO', style: TextStyle(color: Colors.purpleAccent, letterSpacing: 4)) ]))));
+    return Scaffold(body: Container(decoration: BoxDecoration(gradient: LinearGradient(colors:[Color(0xFF1a1a4a), Color(0xFF0B0E2A)])), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children:[ Image.asset('assets/icon.png', width:140), SizedBox(height:20), Text('Kamel TV', style: TextStyle(fontSize:32, fontWeight: FontWeight.bold)), Text('PRO', style: TextStyle(color: Colors.purpleAccent, letterSpacing: 4)) ]))));
   }
 }
 
@@ -81,19 +81,19 @@ class _LiveProPageState extends State<LiveProPage> {
   _init() async { final p=await SharedPreferences.getInstance(); host=p.getString('host')??''; user=p.getString('user')??''; pass=p.getString('pass')??''; _loadCats(); }
   _loadCats() async { try{ final r=await http.get(Uri.parse('$host/player_api.php?username=$user&password=$pass&action=get_live_categories')); cats=json.decode(r.body); setState((){}); if(cats.isNotEmpty) _loadChans(cats[0]['category_id']); }catch(e){} }
   _loadChans(id) async { final r=await http.get(Uri.parse('$host/player_api.php?username=$user&password=$pass&action=get_live_streams&category_id=$id')); chans=json.decode(r.body); si=0; setState((){}); if(chans.isNotEmpty) _play(chans[0]); }
-  _play(ch) { final url='$host/live/$user/$pass/${ch['stream_id']}.m3u8'; pc?.dispose(); pc = BetterPlayerController(BetterPlayerConfiguration(autoPlay:true, aspectRatio:16/9, fit: BoxFit.contain)); pc!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, url, liveStream:true)); setState((){}); }
+  _play(ch) { final url='$host/live/$user/$pass/${ch['stream_id']}.m3u8'; pc?.dispose(); pc = BetterPlayerController(BetterPlayerConfiguration(autoPlay:true, aspectRatio:16/9)); pc!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, url, liveStream:true)); setState((){}); }
   @override void dispose(){ pc?.dispose(); super.dispose(); }
   @override Widget build(BuildContext context){
     return Scaffold(backgroundColor: Color(0xFF0B0E2A), body: Row(children:[
       Container(width:280, color: Colors.black45, child: ListView.builder(itemCount:cats.length, itemBuilder:(_,i)=> ListTile(selected:i==ci, selectedTileColor: Colors.purple.shade800, title: Text(cats[i]['category_name']??''), onTap:(){ setState(()=>ci=i); _loadChans(cats[i]['category_id']); }))),
-      Container(width:380, color: Colors.black26, child: ListView.builder(itemCount:chans.length, itemBuilder:(_,i)=> ListTile(selected:i==si, selectedTileColor: Colors.indigo.shade700, title: Text(chans[i]['name']??'', maxLines:1, overflow:TextOverflow.ellipsis), onTap:(){ setState(()=>si=i); _play(chans[i]); }, onFocusChange:(f){ if(f){ setState(()=>si=i); _play(chans[i]); } }))),
-      Expanded(child: Column(children:[ Expanded(child: Container(margin: EdgeInsets.all(16), child: pc==null? Center(child: Text('Select channel')): BetterPlayer(controller: pc!))), Container(padding: EdgeInsets.all(12), color: Colors.black54, child: Row(children:[ Expanded(child: Text(si<chans.length? chans[si]['name']??'':'', style: TextStyle(fontSize:20))), IconButton(icon: Icon(Icons.fullscreen), onPressed:(){}) ])) ]))
+      Container(width:380, color: Colors.black26, child: ListView.builder(itemCount:chans.length, itemBuilder:(_,i)=> ListTile(selected:i==si, selectedTileColor: Colors.indigo.shade700, title: Text(chans[i]['name']??'', maxLines:1, overflow:TextOverflow.ellipsis), onTap:(){ setState(()=>si=i); _play(chans[i]); }))),
+      Expanded(child: Column(children:[ Expanded(child: Container(margin: EdgeInsets.all(16), child: pc==null? Center(child: Text('Select channel')): BetterPlayer(controller: pc!))), Container(padding: EdgeInsets.all(12), color: Colors.black54, child: Text(si<chans.length? chans[si]['name']??'':'', style: TextStyle(fontSize:20))) ]))
     ]));
   }
 }
 
-class FilmsPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('films'))), body: Center(child: Text('Films - connect Xtream'))); }
-class SeriesPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('series'))), body: Center(child: Text('Series - connect Xtream'))); }
+class FilmsPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('films'))), body: Center(child: Text('Films'))); }
+class SeriesPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('series'))), body: Center(child: Text('Series'))); }
 class SettingsPage extends StatefulWidget { @override _SettingsPageState createState()=>_SettingsPageState(); }
 class _SettingsPageState extends State<SettingsPage> {
   _set(l) async { final p=await SharedPreferences.getInstance(); await p.setString('lang', l); setState(()=>lang=l); }
