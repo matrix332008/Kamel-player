@@ -1,744 +1,101 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:better_player/better_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:better_player/better_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-void main() {
-  runApp(const KamelTVApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await WakelockPlus.enable();
+  SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  runApp(KamelTVApp());
 }
+
+final Map<String, Map<String,String>> T = {
+  'fr': {'app':'Kamel TV','live':'Canal','films':'Films','series':'Séries','settings':'Paramètres','account':'Compte','change':'Changer de liste','reload':'Recharger','exit':'SORTIR','login':'Connexion','host':'Hôte Xtream','user':'Utilisateur','pass':'Mot de passe','save':'Enregistrer','exp':'Expiration'},
+  'ar': {'app':'كمال تيفي','live':'قنوات','films':'أفلام','series':'مسلسلات','settings':'إعدادات','account':'الحساب','change':'تغيير القائمة','reload':'إعادة تحميل','exit':'خروج','login':'تسجيل الدخول','host':'رابط اكستريم','user':'المستخدم','pass':'كلمة السر','save':'حفظ','exp':'انتهاء'},
+  'cs': {'app':'Kamel TV','live':'Kanály','films':'Filmy','series':'Seriály','settings':'Nastavení','account':'Účet','change':'Změnit seznam','reload':'Obnovit','exit':'KONEC','login':'Přihlášení','host':'Xtream host','user':'Uživatel','pass':'Heslo','save':'Uložit','exp':'Expirace'},
+};
+String lang = 'fr';
+String t(String k) => T[lang]?[k]?? k;
 
 class KamelTVApp extends StatelessWidget {
-  const KamelTVApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Splash(),
-    );
+  @override Widget build(BuildContext context) {
+    return MaterialApp(debugShowCheckedModeBanner:false, home:SplashPro(), theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: Color(0xFF0B0E2A)));
   }
 }
 
-// SPLASH
-class Splash extends StatefulWidget {
-  const Splash({super.key});
-  @override
-  State<Splash> createState() => _SplashState();
-}
-class _SplashState extends State<Splash> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 300), () async {
-      final p = await SharedPreferences.getInstance();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => p.getString('type') == null
-             ? const LoginPage()
-              : const HomePage(),
-        ),
-      );
-    });
+class SplashPro extends StatefulWidget { @override _SplashProState createState()=>_SplashProState(); }
+class _SplashProState extends State<SplashPro> {
+  @override void initState(){ super.initState(); _init(); }
+  _init() async {
+    final p = await SharedPreferences.getInstance();
+    lang = p.getString('lang')?? 'fr';
+    await Future.delayed(Duration(seconds:2));
+    final has = p.getString('host')!= null;
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => has? HomePro() : LoginPro()));
   }
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(child: CircularProgressIndicator()),
-    );
+  @override Widget build(BuildContext context){
+    return Scaffold(body: Container(decoration: BoxDecoration(gradient: LinearGradient(colors:[Color(0xFF1a1a4a), Color(0xFF0B0E2A)], begin: Alignment.topLeft, end: Alignment.bottomRight)), child: Center(child: Column(mainAxisSize: MainAxisSize.min, children:[ Image.asset('assets/icon.png', width:140), SizedBox(height:20), Text('Kamel TV', style: TextStyle(fontSize:32, fontWeight: FontWeight.bold, color: Colors.white)), SizedBox(height:8), Text('PRO', style: TextStyle(color: Colors.purpleAccent, letterSpacing: 4)) ]))));
   }
 }
 
-// LOGIN
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-class _LoginPageState extends State<LoginPage> {
-  bool isXtream = true;
-  final s = TextEditingController(text: 'http://');
-  final u = TextEditingController();
-  final p = TextEditingController();
-  final m = TextEditingController();
-
-  Future<void> saveX() async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setString('type', 'xtream');
-    await sp.setString('server', s.text.trim());
-    await sp.setString('user', u.text.trim());
-    await sp.setString('pass', p.text.trim());
-    if (mounted) {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const HomePage()));
-    }
-  }
-
-  Future<void> saveM() async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setString('type', 'm3u');
-    await sp.setString('m3u', m.text.trim());
-    if (mounted) {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const HomePage()));
-    }
-  }
-
-  Future<String?> _ask(String title, String val, bool obs) {
-    final c = TextEditingController(text: val);
-    return showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: Colors.black,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: c,
-          obscureText: obs,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.pop(context, c.text),
-          style: const TextStyle(color: Colors.white, fontSize: 20),
-          decoration: const InputDecoration(
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.red)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.red, width: 2)),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, c.text),
-              child: const Text('OK', style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-              image: AssetImage('assets/background.jpeg'), fit: BoxFit.cover),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red, width: 3),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Image.asset('assets/icon.png', fit: BoxFit.cover),
-              ),
-              const SizedBox(height: 10),
-              const Text('Kamel TV',
-                  style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton(
-                    autofocus: true,
-                    onPressed: () => setState(() => isXtream = true),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isXtream? Colors.red : Colors.grey[800]),
-                    child: const Text('Xtream'),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () => setState(() => isXtream = false),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                           !isXtream? Colors.deepPurple : Colors.grey[800]),
-                    child: const Text('M3U'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 360,
-                child: Column(
-                  children: [
-                    if (isXtream)...[
-                      _btn(s, 'رابط السيرفر', Icons.dns),
-                      const SizedBox(height: 12),
-                      _btn(u, 'اسم المستخدم', Icons.person),
-                      const SizedBox(height: 12),
-                      _btn(p, 'كلمة المرور', Icons.lock, true),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: saveX,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red),
-                          child: const Text('دخول'),
-                        ),
-                      ),
-                    ] else...[
-                      _btn(m, 'رابط M3U', Icons.link),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: saveM,
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurple),
-                          child: const Text('دخول'),
-                        ),
-                      ),
-                    ]
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _btn(TextEditingController c, String h, IconData i,
-      [bool obs = false]) {
-    return Focus(
-      child: Builder(builder: (ctx) {
-        final has = Focus.of(ctx).hasFocus;
-        return InkWell(
-          onTap: () async {
-            final v = await _ask(h, c.text, obs);
-            if (v!= null) setState(() => c.text = v);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: has? Colors.red : Colors.transparent, width: 3),
-            ),
-            child: Row(
-              children: [
-                Icon(i, color: Colors.red),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    c.text.isEmpty? h : (obs? '••••••' : c.text),
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
+class LoginPro extends StatefulWidget { @override _LoginProState createState()=>_LoginProState(); }
+class _LoginProState extends State<LoginPro> {
+  final host = TextEditingController(); final user = TextEditingController(); final pass = TextEditingController();
+  _save() async { final p = await SharedPreferences.getInstance(); await p.setString('host', host.text); await p.setString('user', user.text); await p.setString('pass', pass.text); Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>HomePro())); }
+  @override Widget build(BuildContext context){
+    return Scaffold(body: Stack(fit: StackFit.expand, children:[ Image.asset('assets/background.jpeg', fit: BoxFit.cover), Container(color: Colors.black54), Center(child: Container(width:500, padding: EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children:[ Text(t('login'), style: TextStyle(fontSize:28)), SizedBox(height:20), TextField(controller: host, decoration: InputDecoration(labelText: t('host'), filled:true)), SizedBox(height:12), TextField(controller: user, decoration: InputDecoration(labelText: t('user'), filled:true)), SizedBox(height:12), TextField(controller: pass, obscureText:true, decoration: InputDecoration(labelText: t('pass'), filled:true)), SizedBox(height:20), ElevatedButton(onPressed: _save, style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, minimumSize: Size(double.infinity,50)), child: Text(t('save'))) ]))) ]));
   }
 }
 
-// HOME
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-class _HomePageState extends State<HomePage> {
-  String type = '', server = '', user = '', pass = '', m3u = '';
-  int menu = 0;
-  List cats = [], streams = [];
-  String catId = '';
-  bool loading = false;
-  DateTime? lastBack;
-
-  final menus = [
-    {'t': 'Live', 'i': Icons.live_tv},
-    {'t': 'Movies', 'i': Icons.movie},
-    {'t': 'Series', 'i': Icons.tv},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    final sp = await SharedPreferences.getInstance();
-    setState(() {
-      type = sp.getString('type')?? '';
-      server = sp.getString('server')?? '';
-      user = sp.getString('user')?? '';
-      pass = sp.getString('pass')?? '';
-      m3u = sp.getString('m3u')?? '';
-    });
-    _loadCats();
-  }
-
-  Future<void> _loadCats() async {
-    if (type == 'm3u') {
-      _loadStreams();
-      return;
-    }
-    setState(() => loading = true);
-    final act = menu == 0
-       ? 'get_live_categories'
-        : menu == 1
-           ? 'get_vod_categories'
-            : 'get_series_categories';
-    final r = await http.get(Uri.parse(
-        '$server/player_api.php?username=$user&password=$pass&action=$act'));
-    final data = json.decode(utf8.decode(r.bodyBytes));
-    setState(() {
-      cats = data;
-      loading = false;
-    });
-  }
-
-  Future<void> _loadStreams() async {
-    setState(() => loading = true);
-    if (type == 'm3u') {
-      final r = await http.get(Uri.parse(m3u));
-      final lines = utf8.decode(r.bodyBytes).split('\n');
-      final List s = [];
-      for (int i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith('#EXTINF')) {
-          final n = lines[i].split(',').last;
-          if (i + 1 < lines.length) {
-            s.add({'name': n, 'url': lines[i + 1].trim()});
-          }
-        }
-      }
-      setState(() {
-        streams = s;
-        loading = false;
-      });
-      return;
-    }
-    final act = menu == 0
-       ? 'get_live_streams'
-        : menu == 1
-           ? 'get_vod_streams'
-            : 'get_series';
-    final r = await http.get(Uri.parse(
-        '$server/player_api.php?username=$user&password=$pass&action=$act&category_id=$catId'));
-    final data = json.decode(utf8.decode(r.bodyBytes));
-    setState(() {
-      streams = data;
-      loading = false;
-    });
-  }
-
-  String _url(m) {
-    if (menu == 0) return '$server/live/$user/$pass/${m['stream_id']}.ts';
-    if (menu == 1) {
-      return '$server/movie/$user/$pass/${m['stream_id']}.${m['container_extension']}';
-    }
-    return '$server/series/$user/$pass/${m['series_id']}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        final now = DateTime.now();
-        if (lastBack == null || now.difference(lastBack!) > const Duration(seconds: 2)) {
-          lastBack = now;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('اضغط مرة اخرى للخروج'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        } else {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Row(
-          children: [
-            // MENU
-            Container(
-              width: 240,
-              color: const Color(0xFF0D1B5C),
-              child: Column(
-                children: [
-                  const SizedBox(height: 30),
-                  const CircleAvatar(
-                      radius: 28,
-                      backgroundImage: AssetImage('assets/icon.png')),
-                  const SizedBox(height: 8),
-                  Text(user, style: const TextStyle(color: Colors.white)),
-                  const Divider(color: Colors.white24),
-                 ...List.generate(menus.length, (i) {
-                    return Focus(
-                      onFocusChange: (f) {
-                        if (f && menu!= i) {
-                          setState(() => menu = i);
-                          _loadCats();
-                        }
-                      },
-                      child: Container(
-                        color: menu == i? Colors.red : Colors.transparent,
-                        child: ListTile(
-                          autofocus: i == 0,
-                          leading: Icon(menus[i]['i'] as IconData,
-                              color: Colors.white),
-                          title: Text(menus[i]['t'] as String,
-                              style: const TextStyle(color: Colors.white)),
-                          onTap: () {
-                            setState(() => menu = i);
-                            _loadCats();
-                          },
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            // CATEGORIES
-            Container(
-              width: 220,
-              color: Colors.black,
-              child: loading
-                 ? const Center(child: CircularProgressIndicator())
-                  : ListView.builder(
-                      itemCount: cats.length,
-                      itemBuilder: (_, i) {
-                        final b = cats[i];
-                        final sel = b['category_id'] == catId;
-                        return Focus(
-                          autofocus: i == 0,
-                          onKey: (node, e) {
-                            if (e is RawKeyDownEvent &&
-                                e.logicalKey == LogicalKeyboardKey.select) {
-                              setState(() => catId = b['category_id']);
-                              _loadStreams();
-                              return KeyEventResult.handled;
-                            }
-                            return KeyEventResult.ignored;
-                          },
-                          child: Builder(builder: (ctx) {
-                            final has = Focus.of(ctx).hasFocus;
-                            return InkWell(
-                              onTap: () {
-                                setState(() => catId = b['category_id']);
-                                _loadStreams();
-                              },
-                              child: Container(
-                                color: sel
-                                   ? Colors.red.shade800
-                                    : has
-                                       ? Colors.white24
-                                        : Colors.transparent,
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 14, horizontal: 12),
-                                child: Text(
-                                  b['category_name']?? '',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: sel
-                                       ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        );
-                      },
-                    ),
-            ),
-            // STREAMS
-            Expanded(
-              child: loading
-                 ? const Center(child: CircularProgressIndicator())
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(10),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: streams.length,
-                      itemBuilder: (_, i) {
-                        final s = streams[i];
-                        final name = s['name']?? s['title']?? '';
-                        final icon = s['stream_icon']?? s['cover']?? '';
-                        return Focus(
-                          autofocus: i == 0,
-                          onKey: (n, e) {
-                            if (e is RawKeyDownEvent &&
-                                e.logicalKey == LogicalKeyboardKey.select) {
-                              final list = streams
-                                 .map((e) => {
-                                        'name': e['name']?? e['title']?? '',
-                                        'url': type == 'm3u'
-                                           ? e['url']
-                                            : _url(e)
-                                      })
-                                 .toList();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PlayerPage(
-                                      streams: list, index: i),
-                                ),
-                              );
-                              return KeyEventResult.handled;
-                            }
-                            return KeyEventResult.ignored;
-                          },
-                          child: Builder(builder: (ctx) {
-                            final has = Focus.of(ctx).hasFocus;
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey[900],
-                                border: Border.all(
-                                    color: has? Colors.red : Colors.transparent,
-                                    width: 3),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: icon!= ''
-                                       ? Image.network(
-                                            icon,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Icon(Icons.tv,
-                                                    color: Colors.white,
-                                                    size: 60),
-                                          )
-                                        : const Icon(Icons.tv,
-                                            color: Colors.white, size: 60),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: Text(
-                                      name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 13),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
+class HomePro extends StatefulWidget { @override _HomeProState createState()=>_HomeProState(); }
+class _HomeProState extends State<HomePro> {
+  String exp = '2025-12-31';
+  @override void initState(){ super.initState(); _load(); }
+  _load() async { final p = await SharedPreferences.getInstance(); setState((){ lang = p.getString('lang')?? 'fr'; }); }
+  @override Widget build(BuildContext context){
+    final items = [
+      {'k':'live','icon':Icons.live_tv,'page':()=>LiveProPage()},
+      {'k':'films','icon':Icons.movie,'page':()=>FilmsPage()},
+      {'k':'series','icon':Icons.tv,'page':()=>SeriesPage()},
+      {'k':'settings','icon':Icons.settings,'page':()=>SettingsPage()},
+      {'k':'account','icon':Icons.person,'page':null},
+      {'k':'change','icon':Icons.swap_horiz,'page':null},
+      {'k':'reload','icon':Icons.refresh,'page':null},
+      {'k':'exit','icon':Icons.power_settings_new,'page':null},
+    ];
+    return Scaffold(body: Container(decoration: BoxDecoration(image: DecorationImage(image: AssetImage('assets/background.jpeg'), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken))), child: Column(children:[
+      Container(padding: EdgeInsets.symmetric(horizontal:24, vertical:16), color: Colors.black54, child: Row(children:[ Image.asset('assets/icon.png', width:40), SizedBox(width:12), Text(t('app'), style: TextStyle(fontSize:24, fontWeight: FontWeight.bold)), Spacer(), Text('${t('exp')}: $exp', style: TextStyle(color: Colors.amber)) ])),
+      Expanded(child: Padding(padding: EdgeInsets.all(32), child: GridView.builder(gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:4, childAspectRatio:1.6, crossAxisSpacing:20, mainAxisSpacing:20), itemCount: items.length, itemBuilder: (_,i){ final it=items[i]; return InkWell(onTap:(){ if(it['page']!=null) Navigator.push(context, MaterialPageRoute(builder: (_)=>(it['page'] as Function)())); }, child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors:[Colors.purple.shade800, Colors.indigo.shade900]), borderRadius: BorderRadius.circular(16)), child: Column(mainAxisAlignment: MainAxisAlignment.center, children:[ Icon(it['icon'] as IconData, size:48), SizedBox(height:12), Text(t(it['k'] as String), style: TextStyle(fontSize:18)) ]))); })))
+    ])));
   }
 }
 
-// PLAYER
-class PlayerPage extends StatefulWidget {
-  final List streams;
-  final int index;
-  const PlayerPage({super.key, required this.streams, required this.index});
-  @override
-  State<PlayerPage> createState() => _PlayerPageState();
+class LiveProPage extends StatefulWidget { @override _LiveProPageState createState()=>_LiveProPageState(); }
+class _LiveProPageState extends State<LiveProPage> {
+  List cats=[]; List chans=[]; int ci=0; int si=0; BetterPlayerController? pc; String host=''; String user=''; String pass='';
+  @override void initState(){ super.initState(); _init(); }
+  _init() async { final p=await SharedPreferences.getInstance(); host=p.getString('host')??''; user=p.getString('user')??''; pass=p.getString('pass')??''; _loadCats(); }
+  _loadCats() async { try{ final r=await http.get(Uri.parse('$host/player_api.php?username=$user&password=$pass&action=get_live_categories')); cats=json.decode(r.body); setState((){}); if(cats.isNotEmpty) _loadChans(cats[0]['category_id']); }catch(e){} }
+  _loadChans(id) async { final r=await http.get(Uri.parse('$host/player_api.php?username=$user&password=$pass&action=get_live_streams&category_id=$id')); chans=json.decode(r.body); si=0; setState((){}); if(chans.isNotEmpty) _play(chans[0]); }
+  _play(ch) { final url='$host/live/$user/$pass/${ch['stream_id']}.m3u8'; pc?.dispose(); pc = BetterPlayerController(BetterPlayerConfiguration(autoPlay:true, aspectRatio:16/9, fit: BoxFit.contain)); pc!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, url, liveStream:true)); setState((){}); }
+  @override void dispose(){ pc?.dispose(); super.dispose(); }
+  @override Widget build(BuildContext context){
+    return Scaffold(backgroundColor: Color(0xFF0B0E2A), body: Row(children:[
+      Container(width:280, color: Colors.black45, child: ListView.builder(itemCount:cats.length, itemBuilder:(_,i)=> ListTile(selected:i==ci, selectedTileColor: Colors.purple.shade800, title: Text(cats[i]['category_name']??''), onTap:(){ setState(()=>ci=i); _loadChans(cats[i]['category_id']); }))),
+      Container(width:380, color: Colors.black26, child: ListView.builder(itemCount:chans.length, itemBuilder:(_,i)=> ListTile(selected:i==si, selectedTileColor: Colors.indigo.shade700, title: Text(chans[i]['name']??'', maxLines:1, overflow:TextOverflow.ellipsis), onTap:(){ setState(()=>si=i); _play(chans[i]); }, onFocusChange:(f){ if(f){ setState(()=>si=i); _play(chans[i]); } }))),
+      Expanded(child: Column(children:[ Expanded(child: Container(margin: EdgeInsets.all(16), child: pc==null? Center(child: Text('Select channel')): BetterPlayer(controller: pc!))), Container(padding: EdgeInsets.all(12), color: Colors.black54, child: Row(children:[ Expanded(child: Text(si<chans.length? chans[si]['name']??'':'', style: TextStyle(fontSize:20))), IconButton(icon: Icon(Icons.fullscreen), onPressed:(){}) ])) ]))
+    ]));
+  }
 }
-class _PlayerPageState extends State<PlayerPage> {
-  late BetterPlayerController ctrl;
-  int idx = 0;
-  bool show = true;
-  Timer? t;
 
-  @override
-  void initState() {
-    super.initState();
-    idx = widget.index;
-    _play();
-  }
-
-  void _play() {
-    WakelockPlus.enable();
-    ctrl = BetterPlayerController(
-      const BetterPlayerConfiguration(
-        autoPlay: true,
-        fit: BoxFit.contain,
-        aspectRatio: null,
-        handleLifecycle: true,
-        controlsConfiguration:
-            BetterPlayerControlsConfiguration(showControls: false),
-      ),
-      betterPlayerDataSource: BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        widget.streams[idx]['url'],
-        liveStream: true,
-        bufferingConfiguration: const BetterPlayerBufferingConfiguration(
-          minBufferMs: 3000,
-          maxBufferMs: 10000,
-        ),
-      ),
-    );
-    setState(() => show = true);
-    t?.cancel();
-    t = Timer(const Duration(seconds: 3), () {
-      if (mounted) setState(() => show = false);
-    });
-  }
-
-  void _next() {
-    if (idx < widget.streams.length - 1) {
-      setState(() => idx++);
-      ctrl.dispose();
-      _play();
-    }
-  }
-
-  void _prev() {
-    if (idx > 0) {
-      setState(() => idx--);
-      ctrl.dispose();
-      _play();
-    }
-  }
-
-  void _list() {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.black87,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(
-                'القناة الحالية: ${widget.streams[idx]['name']}',
-                style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              const Divider(color: Colors.white24),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: widget.streams.length,
-                  itemBuilder: (_, i) => ListTile(
-                    autofocus: i == idx,
-                    title: Text(
-                      '${i + 1}. ${widget.streams[i]['name']}',
-                      style: TextStyle(
-                        color: i == idx? Colors.red : Colors.white,
-                        fontSize: 22,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => idx = i);
-                      ctrl.dispose();
-                      _play();
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    WakelockPlus.disable();
-    ctrl.dispose();
-    t?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = widget.streams[idx];
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Focus(
-        autofocus: true,
-        onKey: (n, e) {
-          if (e is RawKeyDownEvent) {
-            if (e.logicalKey == LogicalKeyboardKey.arrowUp) {
-              _prev();
-              return KeyEventResult.handled;
-            }
-            if (e.logicalKey == LogicalKeyboardKey.arrowDown) {
-              _next();
-              return KeyEventResult.handled;
-            }
-            if (e.logicalKey == LogicalKeyboardKey.select ||
-                e.logicalKey == LogicalKeyboardKey.enter) {
-              _list();
-              return KeyEventResult.handled;
-            }
-            if (e.logicalKey == LogicalKeyboardKey.goBack ||
-                e.logicalKey == LogicalKeyboardKey.escape) {
-              Navigator.pop(context);
-              return KeyEventResult.handled;
-            }
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Stack(
-          children: [
-            BetterPlayer(controller: ctrl),
-            AnimatedOpacity(
-              opacity: show? 1 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                alignment: Alignment.bottomCenter,
-                padding: const EdgeInsets.only(bottom: 30),
-                child: Text(
-                  '${idx + 1} - ${s['name']}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 3)],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+class FilmsPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('films'))), body: Center(child: Text('Films - connect Xtream'))); }
+class SeriesPage extends StatelessWidget { @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('series'))), body: Center(child: Text('Series - connect Xtream'))); }
+class SettingsPage extends StatefulWidget { @override _SettingsPageState createState()=>_SettingsPageState(); }
+class _SettingsPageState extends State<SettingsPage> {
+  _set(l) async { final p=await SharedPreferences.getInstance(); await p.setString('lang', l); setState(()=>lang=l); }
+  @override Widget build(BuildContext context)=> Scaffold(appBar: AppBar(title: Text(t('settings'))), body: ListView(children:[ ListTile(title:Text('Français'), onTap:()=>_set('fr')), ListTile(title:Text('العربية'), onTap:()=>_set('ar')), ListTile(title:Text('Čeština'), onTap:()=>_set('cs')) ]));
 }
