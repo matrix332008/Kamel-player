@@ -3,28 +3,40 @@ import 'package:flutter/services.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // يخلي التطبيق ياخو كامل الشاشة في TV
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  runApp(KamelTV());
+  runApp(const KamelTVApp());
 }
 
-class KamelTV extends StatelessWidget {
+class KamelTVApp extends StatelessWidget {
+  const KamelTVApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginTV(),
       theme: ThemeData.dark(),
+      home: const TvLoginPage(),
     );
   }
 }
 
-class LoginTV extends StatefulWidget {
+class TvLoginPage extends StatefulWidget {
+  const TvLoginPage({super.key});
   @override
-  _LoginTVState createState() => _LoginTVState();
+  State<TvLoginPage> createState() => _TvLoginPageState();
 }
 
-class _LoginTVState extends State<LoginTV> {
+class _TvLoginPageState extends State<TvLoginPage> {
   bool isXtream = true;
+
+  // FocusNodes - هذا سر الـ remote
+  final xtreamFocus = FocusNode();
+  final m3uFocus = FocusNode();
+  final field1Focus = FocusNode();
+  final field2Focus = FocusNode();
+  final field3Focus = FocusNode();
+  final connectFocus = FocusNode();
+
   final urlCtrl = TextEditingController();
   final userCtrl = TextEditingController();
   final passCtrl = TextEditingController();
@@ -32,65 +44,73 @@ class _LoginTVState extends State<LoginTV> {
   final m3uUrlCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // أول ما يفتح، الـ focus على Xtream
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      xtreamFocus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    xtreamFocus.dispose(); m3uFocus.dispose();
+    field1Focus.dispose(); field2Focus.dispose();
+    field3Focus.dispose(); connectFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/background.jpeg'),
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
           ),
         ),
         child: Center(
-          child: FocusTraversalGroup(
+          child: SizedBox(
+            width: 900,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // صورتك في الوسط
-                Container(
-                  width: 180, height: 180,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.redAccent, width: 3),
-                    image: DecorationImage(image: AssetImage('assets/icon.png'), fit: BoxFit.cover),
-                  ),
-                ),
-                SizedBox(height: 30),
+                // صورتك
+                Image.asset('assets/icon.png', width: 160, height: 160),
+                const SizedBox(height: 30),
+
                 // زوز بطونات
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _tabButton('Xtream Codes', true),
-                    SizedBox(width: 20),
-                    _tabButton('M3U Playlist', false),
+                    _tvButton('Xtream Codes', xtreamFocus, true, () {
+                      setState(() => isXtream = true);
+                      field1Focus.requestFocus();
+                    }),
+                    const SizedBox(width: 30),
+                    _tvButton('M3U Playlist', m3uFocus, false, () {
+                      setState(() => isXtream = false);
+                      field1Focus.requestFocus();
+                    }),
                   ],
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
+
                 // الخانات
-                Container(
-                  width: 800,
-                  child: Column(
-                    children: isXtream ? [
-                      _tvField('رابط السيرفر', urlCtrl, TextInputType.url, true),
-                      _tvField('اسم المستخدم', userCtrl, TextInputType.text, false),
-                      _tvField('كلمة المرور', passCtrl, TextInputType.visiblePassword, false),
-                    ] : [
-                      _tvField('اسم القائمة', m3uNameCtrl, TextInputType.text, true),
-                      _tvField('رابط M3U', m3uUrlCtrl, TextInputType.url, false),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 30),
-                // زر الاتصال
-                SizedBox(
-                  width: 400, height: 60,
-                  child: ElevatedButton(
-                    autofocus: false,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                    onPressed: () {/* هنا تحط كود الاتصال متاعك */},
-                    child: Text('اتصال', style: TextStyle(fontSize: 24)),
-                  ),
-                ),
+                if (isXtream) ...[
+                  _tvTextField('رابط السيرفر', urlCtrl, field1Focus, field2Focus, TextInputType.url),
+                  _tvTextField('اسم المستخدم', userCtrl, field2Focus, field3Focus, TextInputType.text),
+                  _tvTextField('كلمة المرور', passCtrl, field3Focus, connectFocus, TextInputType.visiblePassword, true),
+                ] else ...[
+                  _tvTextField('اسم القائمة', m3uNameCtrl, field1Focus, field2Focus, TextInputType.text),
+                  _tvTextField('رابط M3U', m3uUrlCtrl, field2Focus, connectFocus, TextInputType.url),
+                ],
+
+                const SizedBox(height: 30),
+                _tvButton('اتصال', connectFocus, null, () {
+                  // هنا تحط كود الاتصال
+                }, isConnect: true),
               ],
             ),
           ),
@@ -99,46 +119,72 @@ class _LoginTVState extends State<LoginTV> {
     );
   }
 
-  Widget _tabButton(String title, bool xtream) {
-    final selected = isXtream == xtream;
+  Widget _tvButton(String text, FocusNode node, bool? isXtreamBtn, VoidCallback onTap, {bool isConnect = false}) {
+    final selected = isXtreamBtn == null ? false : (isXtream == isXtreamBtn);
     return Focus(
-      onKey: (n, e) {
-        if (e is RawKeyDownEvent && e.logicalKey == LogicalKeyboardKey.arrowRight) {
-          setState(() => isXtream = false); return KeyEventResult.handled;
-        }
-        if (e is RawKeyDownEvent && e.logicalKey == LogicalKeyboardKey.arrowLeft) {
-          setState(() => isXtream = true); return KeyEventResult.handled;
+      focusNode: node,
+      onKeyEvent: (n, e) {
+        if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.select) {
+          onTap(); return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
       },
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: selected ? Colors.redAccent : Colors.indigo.shade900,
-          minimumSize: Size(300, 70),
-        ),
-        onPressed: () => setState(() => isXtream = xtream),
-        child: Text(title, style: TextStyle(fontSize: 26, color: Colors.white)),
-      ),
+      child: Builder(builder: (context) {
+        final hasFocus = Focus.of(context).hasFocus;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: isConnect ? 400 : 300,
+          height: 70,
+          decoration: BoxDecoration(
+            color: isConnect ? Colors.redAccent : (selected ? Colors.pinkAccent : Colors.indigo.shade900),
+            borderRadius: BorderRadius.circular(35),
+            border: hasFocus ? Border.all(color: Colors.white, width: 4) : null,
+            boxShadow: hasFocus ? [BoxShadow(color: Colors.white54, blurRadius: 20)] : [],
+          ),
+          child: InkWell(
+            onTap: onTap,
+            child: Center(child: Text(text, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+          ),
+        );
+      }),
     );
   }
 
-  Widget _tvField(String hint, TextEditingController c, TextInputType type, bool auto) {
+  Widget _tvTextField(String hint, TextEditingController ctrl, FocusNode node, FocusNode next, TextInputType type, [bool isPass = false]) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        controller: c,
-        autofocus: auto,
-        textInputAction: TextInputAction.next,
-        keyboardType: type,
-        style: TextStyle(fontSize: 22, color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Colors.black45,
-          border: OutlineInputBorder(),
-          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.redAccent, width: 3)),
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Focus(
+        focusNode: node,
+        onKeyEvent: (n, e) {
+          if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.select) {
+            // كي تضغط OK يفتح الـ clavier
+            SystemChannels.textInput.invokeMethod('TextInput.show');
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Builder(builder: (context) {
+          final hasFocus = Focus.of(context).hasFocus;
+          return TextField(
+            controller: ctrl,
+            focusNode: node,
+            obscureText: isPass,
+            keyboardType: type,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => next.requestFocus(),
+            style: const TextStyle(fontSize: 22, color: Colors.white),
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: Colors.black54,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: hasFocus ? Colors.pinkAccent : Colors.white, width: 3),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
