@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
@@ -22,48 +21,7 @@ class KamelApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const Splash(),
-    );
-  }
-}
-
-class Splash extends StatefulWidget {
-  const Splash({super.key});
-  @override
-  State<Splash> createState() => _SplashState();
-}
-
-class _SplashState extends State<Splash> {
-  @override
-  void initState() {
-    super.initState();
-    _check();
-  }
-
-  _check() async {
-    final p = await SharedPreferences.getInstance();
-    final h = p.getString('host');
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => h == null
-            ? const TvLogin()
-            : HomePage(host: h, user: p.getString('user')!, pass: p.getString('pass')!),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage('assets/background.jpeg'), fit: BoxFit.cover),
-        ),
-        child: Center(child: Image.asset('assets/icon.png', width: 180)),
-      ),
+      home: const TvLogin(), // يدخل ديراكت على Login
     );
   }
 }
@@ -94,14 +52,9 @@ class _TvLoginState extends State<TvLogin> {
     super.dispose();
   }
 
-  login() async {
+  login() {
     if (url.text.isEmpty || user.text.isEmpty) return;
-    final p = await SharedPreferences.getInstance();
-    await p.setString('host', url.text);
-    await p.setString('user', user.text);
-    await p.setString('pass', pass.text);
-    if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(host: url.text, user: user.text, pass: pass.text)));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage(host: url.text, user: user.text, pass: pass.text)));
   }
 
   KeyEventResult handleKey(FocusNode current, FocusNode? up, FocusNode? down, FocusNode? left, FocusNode? right, KeyEvent event) {
@@ -110,6 +63,9 @@ class _TvLoginState extends State<TvLogin> {
     if (event.logicalKey == LogicalKeyboardKey.arrowUp && up != null) { up.requestFocus(); return KeyEventResult.handled; }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft && left != null) { left.requestFocus(); return KeyEventResult.handled; }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight && right != null) { right.requestFocus(); return KeyEventResult.handled; }
+    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+      if(current == fC) login();
+    }
     return KeyEventResult.ignored;
   }
 
