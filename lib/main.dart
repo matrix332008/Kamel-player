@@ -2,19 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 void main() {
-  runApp(const KamelTVApp());
+  runApp(const KamelTV());
 }
 
-class KamelTVApp extends StatelessWidget {
-  const KamelTVApp({super.key});
+class KamelTV extends StatelessWidget {
+  const KamelTV({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const LoginPage(),
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowUp): const DirectionalFocusIntent(TraversalDirection.up),
+        LogicalKeySet(LogicalKeyboardKey.arrowDown): const DirectionalFocusIntent(TraversalDirection.down),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
+        LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
+      },
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: const LoginPage(),
       ),
     );
   }
@@ -28,188 +34,161 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool isXtream = true;
-  final server = TextEditingController();
+  final url = TextEditingController();
   final user = TextEditingController();
   final pass = TextEditingController();
-  bool loggedIn = false;
+  bool logged = false;
 
   @override
   Widget build(BuildContext context) {
-    if (loggedIn) return const HomePage();
+    if (logged) return const HomePage();
     
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): const DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): const DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
-        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: FocusTraversalGroup(
-            child: SizedBox(
-              width: 700,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 100, height: 100,
-                    color: Colors.red,
-                    child: const Icon(Icons.person, size: 70, color: Colors.white),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text('Kamel TV', style: TextStyle(fontSize: 30, color: Colors.red, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 40),
-                  
-                  // Xtream + M3U
-                  Row(children: [
-                    Expanded(
-                      child: Focus(
-                        autofocus: true,
-                        child: Builder(builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return GestureDetector(
-                            onTap: () => setState(() => isXtream = true),
-                            child: Container(
-                              height: 70,
-                              decoration: BoxDecoration(
-                                color: isXtream ? Colors.red : Colors.blue.shade900,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
-                              ),
-                              child: const Center(child: Text('Xtream Codes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
-                            ),
-                          );
-                        }),
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/bg.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          color: Colors.black.withOpacity(0.7),
+          child: Center(
+            child: FocusTraversalGroup(
+              child: SizedBox(
+                width: 700,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Image.asset(
+                        'assets/avatar.jpg',
+                        width: 120, height: 120, fit: BoxFit.cover,
                       ),
                     ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Focus(
-                        child: Builder(builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return GestureDetector(
-                            onTap: () => setState(() => isXtream = false),
-                            child: Container(
-                              height: 70,
-                              decoration: BoxDecoration(
-                                color: !isXtream ? Colors.red : Colors.blue.shade900,
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
+                    const SizedBox(height: 10),
+                    const Text('Kamel TV', style: TextStyle(fontSize: 32, color: Colors.red, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 40),
+                    
+                    Row(children: [
+                      Expanded(
+                        child: Focus(
+                          autofocus: true,
+                          child: Builder(builder: (context) {
+                            final hasFocus = Focus.of(context).hasFocus;
+                            return ElevatedButton(
+                              onPressed: () => setState(() => isXtream = true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isXtream ? Colors.red : Colors.blue.shade900,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
                               ),
-                              child: const Center(child: Text('M3U Playlist', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
-                            ),
-                          );
-                        }),
+                              child: const Text('Xtream Codes', style: TextStyle(fontSize: 24)),
+                            );
+                          }),
+                        ),
                       ),
-                    ),
-                  ]),
-                  const SizedBox(height: 30),
-                  
-                  // Server URL
-                  Focus(
-                    child: Builder(builder: (context) {
-                      final hasFocus = Focus.of(context).hasFocus;
-                      return Container(
-                        height: 65,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade900,
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 1.5),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Focus(
+                          child: Builder(builder: (context) {
+                            final hasFocus = Focus.of(context).hasFocus;
+                            return ElevatedButton(
+                              onPressed: () => setState(() => isXtream = false),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: !isXtream ? Colors.red : Colors.blue.shade900,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
+                              ),
+                              child: const Text('M3U Playlist', style: TextStyle(fontSize: 24)),
+                            );
+                          }),
                         ),
-                        child: TextField(
-                          controller: server,
-                          style: const TextStyle(color: Colors.white, fontSize: 22),
-                          decoration: InputDecoration(
-                            hintText: isXtream ? 'رابط السيرفر' : 'رابط M3U',
-                            hintStyle: const TextStyle(color: Colors.white54, fontSize: 22),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  
-                  if (isXtream) ...[
-                    const SizedBox(height: 20),
+                      ),
+                    ]),
+                    const SizedBox(height: 30),
+                    
                     Focus(
                       child: Builder(builder: (context) {
                         final hasFocus = Focus.of(context).hasFocus;
-                        return Container(
-                          height: 65,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade900,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 1.5),
-                          ),
-                          child: TextField(
-                            controller: user,
-                            style: const TextStyle(color: Colors.white, fontSize: 22),
-                            decoration: const InputDecoration(
-                              hintText: 'اسم المستخدم',
-                              hintStyle: TextStyle(color: Colors.white54, fontSize: 22),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                            ),
+                        return TextField(
+                          controller: url,
+                          style: const TextStyle(color: Colors.white, fontSize: 20),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.black54,
+                            hintText: isXtream ? 'رابط السيرفر' : 'رابط M3U',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
+                            focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 3)),
                           ),
                         );
                       }),
                     ),
-                    const SizedBox(height: 20),
+                    
+                    if (isXtream) ...[
+                      const SizedBox(height: 20),
+                      Focus(
+                        child: Builder(builder: (context) {
+                          final hasFocus = Focus.of(context).hasFocus;
+                          return TextField(
+                            controller: user,
+                            style: const TextStyle(color: Colors.white, fontSize: 20),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.black54,
+                              hintText: 'اسم المستخدم',
+                              hintStyle: const TextStyle(color: Colors.white54),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 3)),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 20),
+                      Focus(
+                        child: Builder(builder: (context) {
+                          final hasFocus = Focus.of(context).hasFocus;
+                          return TextField(
+                            controller: pass,
+                            obscureText: true,
+                            style: const TextStyle(color: Colors.white, fontSize: 20),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.black54,
+                              hintText: 'كلمة المرور',
+                              hintStyle: const TextStyle(color: Colors.white54),
+                              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
+                              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 3)),
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 30),
                     Focus(
                       child: Builder(builder: (context) {
                         final hasFocus = Focus.of(context).hasFocus;
-                        return Container(
-                          height: 65,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade900,
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 1.5),
-                          ),
-                          child: TextField(
-                            controller: pass,
-                            obscureText: true,
-                            style: const TextStyle(color: Colors.white, fontSize: 22),
-                            decoration: const InputDecoration(
-                              hintText: 'كلمة المرور',
-                              hintStyle: TextStyle(color: Colors.white54, fontSize: 22),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 60,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (url.text.isNotEmpty) setState(() => logged = true);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
                             ),
+                            child: const Text('دخول', style: TextStyle(fontSize: 28)),
                           ),
                         );
                       }),
                     ),
                   ],
-                  
-                  const SizedBox(height: 30),
-                  
-                  // زر دخول
-                  Focus(
-                    child: Builder(builder: (context) {
-                      final hasFocus = Focus.of(context).hasFocus;
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 70,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (server.text.isNotEmpty) setState(() => loggedIn = true);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
-                          ),
-                          child: const Text('دخول', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -223,30 +202,32 @@ class HomePage extends StatelessWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
-        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: FocusTraversalGroup(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('BEST IPTV', style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 60),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  _btn('LIVE TV', Icons.live_tv, true),
-                  const SizedBox(width: 30),
-                  _btn('SERIES', Icons.tv, false),
-                  const SizedBox(width: 30),
-                  _btn('FILMS', Icons.movie, false),
-                ]),
-              ],
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/bg.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          color: Colors.black.withOpacity(0.7),
+          child: Center(
+            child: FocusTraversalGroup(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('BEST IPTV', style: TextStyle(fontSize: 50, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 60),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    _btn('LIVE TV', Icons.live_tv, true),
+                    const SizedBox(width: 30),
+                    _btn('SERIES', Icons.tv, false),
+                    const SizedBox(width: 30),
+                    _btn('FILMS', Icons.movie, false),
+                  ]),
+                ],
+              ),
             ),
           ),
         ),
@@ -267,7 +248,7 @@ class HomePage extends StatelessWidget {
             border: Border.all(color: hasFocus ? Colors.white : Colors.white30, width: hasFocus ? 4 : 2),
           ),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 60, color: Colors.white),
+            Icon(icon, size: 60),
             const SizedBox(height: 15),
             Text(title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
           ]),
