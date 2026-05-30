@@ -12,3 +12,6 @@ dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/bg.jpg
+    - assets/avatar.jpg
