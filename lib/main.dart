@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const KamelApp());
@@ -47,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => msg = 'اكتب الرابط');
       return;
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage(text: 'دخلت بـ: ${url.text}')));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage(text: 'تم الاتصال بـ:\n${url.text}')));
   }
 
   KeyEventResult _handleKey(FocusNode current, FocusNode? up, FocusNode? down, FocusNode? left, FocusNode? right, KeyEvent event) {
@@ -110,7 +111,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(child: Text(text, style: const TextStyle(fontSize: 40, color: Colors.white))),
+      body: Center(child: Text(text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 40, color: Colors.white))),
     );
   }
 }
