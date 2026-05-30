@@ -9,9 +9,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  better_player: ^0.0.83
+  wakelock_plus: ^1.2.5
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/bg.jpg
-    - assets/avatar.jpg
+        - assets/background.jpeg
+        - assets/icon.png
