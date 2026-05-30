@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:video_player/video_player.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]);
   runApp(const KamelApp());
 }
 
@@ -38,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   final user = TextEditingController();
   final pass = TextEditingController();
   final fX = FocusNode(), fM = FocusNode(), f1 = FocusNode(), f2 = FocusNode(), f3 = FocusNode(), fC = FocusNode();
-  String error = '';
+  String msg = '';
 
   @override
   void initState() {
@@ -52,45 +42,26 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  login() async {
-    setState(() => error = '');
-    if (url.text.isEmpty || user.text.isEmpty) {
-      setState(() => error = 'عبي البيانات الكل');
+  login() {
+    if (url.text.isEmpty) {
+      setState(() => msg = 'اكتب الرابط');
       return;
     }
-    
-    if (isXtream) {
-      try {
-        final link = '${url.text}/player_api.php?username=${user.text}&password=${pass.text}';
-        final r = await http.get(Uri.parse(link));
-        final data = json.decode(r.body);
-        if (data['user_info']['status'] == 'Active') {
-          if (!mounted) return;
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage(host: url.text, user: user.text, pass: pass.text)));
-        } else {
-          setState(() => error = 'بيانات غالطة');
-        }
-      } catch (e) {
-        setState(() => error = 'فما مشكل في السيرفر');
-      }
-    } else {
-      // M3U
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => M3uPage(m3uUrl: url.text)));
-    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => HomePage(text: 'دخلت بـ: ${url.text}')));
   }
 
   KeyEventResult _handleKey(FocusNode current, FocusNode? up, FocusNode? down, FocusNode? left, FocusNode? right, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown && down != null) { down.requestFocus(); return KeyEventResult.handled; }
-    if (event.logicalKey == LogicalKeyboardKey.arrowUp && up != null) { up.requestFocus(); return KeyEventResult.handled; }
-    if (event.logicalKey == LogicalKeyboardKey.arrowLeft && left != null) { left.requestFocus(); return KeyEventResult.handled; }
-    if (event.logicalKey == LogicalKeyboardKey.arrowRight && right != null) { right.requestFocus(); return KeyEventResult.handled; }
-    if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
-      if (current == fC) login();
-      if (current == fX) setState(() => isXtream = true);
-      if (current == fM) setState(() => isXtream = false);
-      return KeyEventResult.handled;
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown && down != null) { down.requestFocus(); return KeyEventResult.handled; }
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp && up != null) { up.requestFocus(); return KeyEventResult.handled; }
+      if (event.logicalKey == LogicalKeyboardKey.arrowLeft && left != null) { left.requestFocus(); return KeyEventResult.handled; }
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight && right != null) { right.requestFocus(); return KeyEventResult.handled; }
+      if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+        if (current == fC) login();
+        if (current == fX) setState(() => isXtream = true);
+        if (current == fM) setState(() => isXtream = false);
+        return KeyEventResult.handled;
+      }
     }
     return KeyEventResult.ignored;
   }
@@ -98,7 +69,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D1A),
+      backgroundColor: Colors.black,
       body: Center(
         child: SizedBox(
           width: 900,
@@ -113,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
                 Focus(focusNode: fM, onKeyEvent: (n, e) => _handleKey(fM, null, f1, fX, null, e), child: Builder(builder: (c) { final h = Focus.of(c).hasFocus; return Container(width: 280, height: 65, decoration: BoxDecoration(color: !isXtream ? Colors.pinkAccent : Colors.blue.shade900, borderRadius: BorderRadius.circular(30), border: h ? Border.all(color: Colors.white, width: 4) : null), child: const Center(child: Text('M3U Playlist', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)))); })),
               ]),
               const SizedBox(height: 30),
-              Focus(focusNode: f1, onKeyEvent: (n, e) => _handleKey(f1, fX, f2, null, null, e), child: TextField(controller: url, focusNode: f1, decoration: InputDecoration(hintText: isXtream ? 'رابط السيرفر http://...' : 'رابط M3U http://...', filled: true, fillColor: Colors.grey.shade900, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), style: const TextStyle(fontSize: 20))),
+              Focus(focusNode: f1, onKeyEvent: (n, e) => _handleKey(f1, fX, isXtream ? f2 : fC, null, null, e), child: TextField(controller: url, focusNode: f1, decoration: InputDecoration(hintText: isXtream ? 'رابط السيرفر http://...' : 'رابط M3U http://...', filled: true, fillColor: Colors.grey.shade900, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), style: const TextStyle(fontSize: 20))),
               const SizedBox(height: 10),
               if (isXtream) ...[
                 Focus(focusNode: f2, onKeyEvent: (n, e) => _handleKey(f2, f1, f3, null, null, e), child: TextField(controller: user, focusNode: f2, decoration: InputDecoration(hintText: 'اسم المستخدم', filled: true, fillColor: Colors.grey.shade900, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), style: const TextStyle(fontSize: 20))),
@@ -123,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 25),
               Focus(focusNode: fC, onKeyEvent: (n, e) => _handleKey(fC, isXtream ? f3 : f1, null, null, null, e), child: Builder(builder: (c) { final h = Focus.of(c).hasFocus; return Container(width: 400, height: 65, decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(30), border: h ? Border.all(color: Colors.white, width: 4) : null), child: const Center(child: Text('اتصال', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)))); })),
               const SizedBox(height: 15),
-              Text(error, style: const TextStyle(color: Colors.red, fontSize: 18)),
+              Text(msg, style: const TextStyle(color: Colors.red, fontSize: 18)),
             ],
           ),
         ),
@@ -132,27 +103,14 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// الصفحات اللي بعد الـ Login نخليهم مبسطين تو، المهم الـ Login يخدم
 class HomePage extends StatelessWidget {
-  final String host, user, pass;
-  const HomePage({super.key, required this.host, required this.user, required this.pass});
+  final String text;
+  const HomePage({super.key, required this.text});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(child: Text('تم الدخول بنجاح\n$user', style: const TextStyle(fontSize: 40, color: Colors.white))),
-    );
-  }
-}
-
-class M3uPage extends StatelessWidget {
-  final String m3uUrl;
-  const M3uPage({super.key, required this.m3uUrl});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(child: Text('رابط M3U:\n$m3uUrl', style: const TextStyle(fontSize: 30, color: Colors.white))),
+      body: Center(child: Text(text, style: const TextStyle(fontSize: 40, color: Colors.white))),
     );
   }
 }
