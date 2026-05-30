@@ -1,5 +1,5 @@
-name: kamel_tv_pro
-description: Kamel TV Pro - Xtream & M3U Player
+name: kamel_player
+description: Kamel TV IPTV Player
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,26 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  better_player: ^0.0.84
-  http: ^1.2.0
-  shared_preferences: ^2.2.2
-  wakelock_plus: ^1.2.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1
-
-flutter_launcher_icons:
-  android: true
-  ios: false
-  image_path: assets/icon.png
-  adaptive_icon_background: "#1a1a4a"
-  adaptive_icon_foreground: assets/icon.png
+  http: ^1.2.1
+  video_player: ^2.8.6
+  shared_preferences: ^2.2.3
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/background.jpeg
     - assets/icon.png
+    - assets/background.jpeg
