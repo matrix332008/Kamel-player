@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:better_player/better_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -17,66 +16,11 @@ class KamelTVApp extends StatelessWidget {
   const KamelTVApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): const DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): const DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): const DirectionalFocusIntent(TraversalDirection.right),
-      },
-      child: MaterialApp(
-        title: 'Kamel TV',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
-        home: const SplashScreen(),
-      ),
-    );
-  }
-}
-
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkLogin();
-  }
-
-  _checkLogin() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool isLogged = prefs.getBool('isLogged') ?? false;
-    Timer(const Duration(seconds: 2), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(
-        builder: (_) => isLogged ? const HomeScreen() : const LoginScreen(),
-      ));
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage("assets/background.jpeg"), fit: BoxFit.cover),
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Colors.red),
-              SizedBox(height: 20),
-              Text('Kamel TV', style: TextStyle(fontSize: 30, color: Colors.red, fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-      ),
+    return MaterialApp(
+      title: 'Kamel TV',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
+      home: const LoginScreen(),
     );
   }
 }
@@ -94,6 +38,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final pass = TextEditingController();
   bool isLoading = false;
 
+  // هذا اللي يخلي الريموت يخدم
+  final FocusNode _xtreamFocus = FocusNode();
+  final FocusNode _m3uFocus = FocusNode();
+  final FocusNode _urlFocus = FocusNode();
+  final FocusNode _userFocus = FocusNode();
+  final FocusNode _passFocus = FocusNode();
+  final FocusNode _loginFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // اول ما يفتح التطبيق، حط الفوكس على Xtream
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_xtreamFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _xtreamFocus.dispose();
+    _m3uFocus.dispose();
+    _urlFocus.dispose();
+    _userFocus.dispose();
+    _passFocus.dispose();
+    _loginFocus.dispose();
+    super.dispose();
+  }
+
   _login() async {
     if (url.text.isEmpty) return;
     setState(() => isLoading = true);
@@ -109,10 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
           final data = json.decode(response.body);
           if (data['user_info']['auth'] == 1) {
             await prefs.setBool('isLogged', true);
-            await prefs.setString('serverUrl', url.text);
-            await prefs.setString('username', user.text);
-            await prefs.setString('password', pass.text);
-            await prefs.setBool('isXtream', true);
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
           } else {
             _showError('بيانات الدخول غالطة');
@@ -123,8 +91,6 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       await prefs.setBool('isLogged', true);
-      await prefs.setString('m3uUrl', url.text);
-      await prefs.setBool('isXtream', false);
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
     setState(() => isLoading = false);
@@ -144,141 +110,234 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           color: Colors.black.withOpacity(0.75),
           child: Center(
-            child: FocusTraversalGroup(
-              child: SingleChildScrollView(
-                child: Container(
-                  width: 700,
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 120, height: 120,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.red, width: 3),
-                          image: const DecorationImage(image: AssetImage("assets/icon.png"), fit: BoxFit.cover),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      const Text('Kamel TV', style: TextStyle(fontSize: 36, color: Colors.red, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 50),
-                      
-                      Row(children: [
-                        Expanded(
-                          child: Focus(
-                            autofocus: true,
-                            child: Builder(builder: (context) {
-                              final hasFocus = Focus.of(context).hasFocus;
-                              return ElevatedButton(
-                                onPressed: () => setState(() => isXtream = true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isXtream ? Colors.red : Colors.blue.shade900,
-                                  padding: const EdgeInsets.symmetric(vertical: 22),
-                                  side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
-                                ),
-                                child: const Text('Xtream Codes', style: TextStyle(fontSize: 26)),
-                              );
-                            }),
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Focus(
-                            child: Builder(builder: (context) {
-                              final hasFocus = Focus.of(context).hasFocus;
-                              return ElevatedButton(
-                                onPressed: () => setState(() => isXtream = false),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: !isXtream ? Colors.red : Colors.blue.shade900,
-                                  padding: const EdgeInsets.symmetric(vertical: 22),
-                                  side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
-                                ),
-                                child: const Text('M3U Playlist', style: TextStyle(fontSize: 26)),
-                              );
-                            }),
-                          ),
-                        ),
-                      ]),
-                      const SizedBox(height: 35),
-                      
-                      Focus(
-                        child: Builder(builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return TextField(
-                            controller: url,
-                            style: const TextStyle(color: Colors.white, fontSize: 22),
-                            decoration: InputDecoration(
-                              filled: true, fillColor: Colors.black54,
-                              hintText: isXtream ? 'رابط السيرفر' : 'رابط M3U',
-                              hintStyle: const TextStyle(color: Colors.white54),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.red, width: 3)),
-                            ),
-                          );
-                        }),
-                      ),
-                      
-                      if (isXtream) ...[
-                        const SizedBox(height: 20),
-                        Focus(
-                          child: Builder(builder: (context) {
-                            final hasFocus = Focus.of(context).hasFocus;
-                            return TextField(
-                              controller: user,
-                              style: const TextStyle(color: Colors.white, fontSize: 22),
-                              decoration: InputDecoration(
-                                filled: true, fillColor: Colors.black54,
-                                hintText: 'اسم المستخدم',
-                                hintStyle: const TextStyle(color: Colors.white54),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.red, width: 3)),
-                              ),
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 20),
-                        Focus(
-                          child: Builder(builder: (context) {
-                            final hasFocus = Focus.of(context).hasFocus;
-                            return TextField(
-                              controller: pass,
-                              obscureText: true,
-                              style: const TextStyle(color: Colors.white, fontSize: 22),
-                              decoration: InputDecoration(
-                                filled: true, fillColor: Colors.black54,
-                                hintText: 'كلمة المرور',
-                                hintStyle: const TextStyle(color: Colors.white54),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: hasFocus ? Colors.red : Colors.white54, width: 2)),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.red, width: 3)),
-                              ),
-                            );
-                          }),
-                        ),
-                      ],
-                      
-                      const SizedBox(height: 40),
-                      Focus(
-                        child: Builder(builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return SizedBox(
-                            width: double.infinity, height: 70,
-                            child: ElevatedButton(
-                              onPressed: isLoading ? null : _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                side: BorderSide(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
-                              ),
-                              child: isLoading 
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('دخول', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
+            child: Container(
+              width: 700,
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120, height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.red, width: 3),
+                      image: const DecorationImage(image: AssetImage("assets/icon.png"), fit: BoxFit.cover),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 15),
+                  const Text('Kamel TV', style: TextStyle(fontSize: 36, color: Colors.red, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 50),
+                  
+                  // Xtream Button
+                  Focus(
+                    focusNode: _xtreamFocus,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                        FocusScope.of(context).requestFocus(_m3uFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        FocusScope.of(context).requestFocus(_urlFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
+                        setState(() => isXtream = true);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(builder: (context) {
+                      final hasFocus = Focus.of(context).hasFocus;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 22),
+                        decoration: BoxDecoration(
+                          color: isXtream ? Colors.red : Colors.blue.shade900,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
+                        ),
+                        child: const Center(child: Text('Xtream Codes', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // M3U Button
+                  Focus(
+                    focusNode: _m3uFocus,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                        FocusScope.of(context).requestFocus(_xtreamFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        FocusScope.of(context).requestFocus(_urlFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
+                        setState(() => isXtream = false);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(builder: (context) {
+                      final hasFocus = Focus.of(context).hasFocus;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 22),
+                        decoration: BoxDecoration(
+                          color: !isXtream ? Colors.red : Colors.blue.shade900,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
+                        ),
+                        child: const Center(child: Text('M3U Playlist', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 35),
+                  
+                  // URL
+                  Focus(
+                    focusNode: _urlFocus,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        FocusScope.of(context).requestFocus(_xtreamFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        FocusScope.of(context).requestFocus(isXtream ? _userFocus : _loginFocus);
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(builder: (context) {
+                      final hasFocus = Focus.of(context).hasFocus;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 2),
+                        ),
+                        child: TextField(
+                          controller: url,
+                          style: const TextStyle(color: Colors.white, fontSize: 22),
+                          decoration: InputDecoration.collapsed(
+                            hintText: isXtream ? 'رابط السيرفر' : 'رابط M3U',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  
+                  if (isXtream) ...[
+                    const SizedBox(height: 20),
+                    // User
+                    Focus(
+                      focusNode: _userFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          FocusScope.of(context).requestFocus(_urlFocus);
+                          return KeyEventResult.handled;
+                        }
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          FocusScope.of(context).requestFocus(_passFocus);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(builder: (context) {
+                        final hasFocus = Focus.of(context).hasFocus;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 2),
+                          ),
+                          child: TextField(
+                            controller: user,
+                            style: const TextStyle(color: Colors.white, fontSize: 22),
+                            decoration: const InputDecoration.collapsed(
+                              hintText: 'اسم المستخدم',
+                              hintStyle: TextStyle(color: Colors.white54),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 20),
+                    // Pass
+                    Focus(
+                      focusNode: _passFocus,
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                          FocusScope.of(context).requestFocus(_userFocus);
+                          return KeyEventResult.handled;
+                        }
+                        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                          FocusScope.of(context).requestFocus(_loginFocus);
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(builder: (context) {
+                        final hasFocus = Focus.of(context).hasFocus;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: hasFocus ? Colors.red : Colors.white54, width: hasFocus ? 3 : 2),
+                          ),
+                          child: TextField(
+                            controller: pass,
+                            obscureText: true,
+                            style: const TextStyle(color: Colors.white, fontSize: 22),
+                            decoration: const InputDecoration.collapsed(
+                              hintText: 'كلمة المرور',
+                              hintStyle: TextStyle(color: Colors.white54),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 40),
+                  // Login Button
+                  Focus(
+                    focusNode: _loginFocus,
+                    onKeyEvent: (node, event) {
+                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        FocusScope.of(context).requestFocus(isXtream ? _passFocus : _urlFocus);
+                        return KeyEventResult.handled;
+                      }
+                      if (event is KeyDownEvent && (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter)) {
+                        if (!isLoading) _login();
+                        return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: Builder(builder: (context) {
+                      final hasFocus = Focus.of(context).hasFocus;
+                      return Container(
+                        width: double.infinity, height: 70,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: hasFocus ? Colors.white : Colors.transparent, width: 4),
+                        ),
+                        child: Center(
+                          child: isLoading 
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('دخول', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ),
           ),
@@ -299,53 +358,9 @@ class HomeScreen extends StatelessWidget {
         ),
         child: Container(
           color: Colors.black.withOpacity(0.75),
-          child: Center(
-            child: FocusTraversalGroup(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('+420777099379', style: TextStyle(fontSize: 32, color: Colors.red, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  const Text('BEST IPTV', style: TextStyle(fontSize: 55, fontWeight: FontWeight.bold)),
-                  const Text('Service Provider', style: TextStyle(fontSize: 22, color: Colors.white70)),
-                  const SizedBox(height: 80),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    _btn(context, 'LIVE TV', Icons.live_tv, true),
-                    const SizedBox(width: 40),
-                    _btn(context, 'SERIES', Icons.tv, false),
-                    const SizedBox(width: 40),
-                    _btn(context, 'FILMS', Icons.movie, false),
-                  ]),
-                ],
-              ),
-            ),
-          ),
+          child: Center(child: Text('Home Screen', style: TextStyle(fontSize: 50))),
         ),
       ),
-    );
-  }
-
-  Widget _btn(BuildContext context, String title, IconData icon, bool autofocus) {
-    return Focus(
-      autofocus: autofocus,
-      child: Builder(builder: (context) {
-        final hasFocus = Focus.of(context).hasFocus;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 300, height: 180,
-          decoration: BoxDecoration(
-            color: hasFocus ? Colors.red : Colors.grey.shade900.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: hasFocus ? Colors.white : Colors.white30, width: hasFocus ? 5 : 2),
-            boxShadow: hasFocus ? [BoxShadow(color: Colors.red.withOpacity(0.6), blurRadius: 25, spreadRadius: 5)] : [],
-          ),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 70, color: Colors.white),
-            const SizedBox(height: 20),
-            Text(title, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold)),
-          ]),
-        );
-      }),
     );
   }
 }
