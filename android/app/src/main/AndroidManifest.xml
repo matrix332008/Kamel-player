@@ -1,13 +1,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- صلاحيات النت - لازمين للـ IPTV -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    
+    <!-- باش الشاشة ما ترقدش وقت الفيديو -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    
+    <!-- باش VLC يخدم بالـ Hardware Acceleration -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    
+    <!-- للـ Android TV -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
     <uses-feature android:name="android.software.leanback" android:required="true"/>
+    <uses-feature android:name="android.hardware.wifi" android:required="true"/>
     
     <application
         android:label="Kamel TV"
         android:name="${applicationName}"
-        android:usesCleartextTraffic="true">
+        android:icon="@mipmap/ic_launcher"
+        android:banner="@drawable/banner"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -16,14 +33,18 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
             </intent-filter>
+            
         </activity>
+        
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+            
     </application>
 </manifest>
