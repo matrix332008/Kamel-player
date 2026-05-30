@@ -7,7 +7,6 @@
     <application
         android:label="Kamel TV"
         android:name="${applicationName}"
-        android:banner="@drawable/banner"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
