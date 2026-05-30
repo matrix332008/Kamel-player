@@ -1,286 +1,247 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
+import 'dart:convert';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  WakelockPlus.enable();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.leanBack);
-  runApp(const KamelTV());
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  runApp(MyApp());
 }
 
-class KamelTV extends StatelessWidget {
-  const KamelTV({super.key});
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.select): const ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
+        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
+        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
       },
       child: MaterialApp(
+        title: 'Kamel TV',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
-        home: const SplashScreen(),
+        home: IPTVHomePage(),
       ),
     );
   }
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+class IPTVHomePage extends StatefulWidget {
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  _IPTVHomePageState createState() => _IPTVHomePageState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _IPTVHomePageState extends State<IPTVHomePage> {
+  int selectedCategoryIndex = 0;
+  int selectedChannelIndex = 0;
+  bool isCategoryFocused = true;
+  
+  List<String> categories = ["Bein Sports", "SSC", "OSN", "MBC", "Aflam", "Mosalsalat", "Favorites"];
+  Map<String, List<Map<String, String>>> allChannels = {
+    "Bein Sports": [
+      {"name": "Bein 1", "url": "http://example.com/bein1.m3u8", "logo": ""},
+      {"name": "Bein 2", "url": "http://example.com/bein2.m3u8", "logo": ""},
+    ],
+    "SSC": [
+      {"name": "SSC 1", "url": "http://example.com/ssc1.m3u8", "logo": ""},
+    ],
+    "Favorites": [],
+  };
+
+  List<Map<String, String>> get currentChannels => allChannels[categories[selectedCategoryIndex]]?? [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF1a1a1a),
+      body: Row(
+        children: [
+          // Categories على اليسار
+          Container(
+            width: 250,
+            color: Color(0xFF2a2a2a),
+            child: ListView.builder(
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                bool isSelected = selectedCategoryIndex == index;
+                bool isFocused = isCategoryFocused && isSelected;
+                return Container(
+                  margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected? Colors.blue : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: isFocused? Border.all(color: Colors.white, width: 3) : null,
+                  ),
+                  child: ListTile(
+                    title: Text(categories[index], style: TextStyle(color: Colors.white, fontSize: 18)),
+                    onTap: () {
+                      setState(() {
+                        selectedCategoryIndex = index;
+                        selectedChannelIndex = 0;
+                        isCategoryFocused = false;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          // Channels Grid على اليمين
+          Expanded(
+            child: GridView.builder(
+              padding: EdgeInsets.all(20),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                childAspectRatio: 16 / 9,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
+              ),
+              itemCount: currentChannels.length,
+              itemBuilder: (context, index) {
+                bool isSelected = selectedChannelIndex == index &&!isCategoryFocused;
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoPlayerScreen(url: currentChannels[index]["url"]!),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[850],
+                      borderRadius: BorderRadius.circular(10),
+                      border: isSelected? Border.all(color: Colors.yellow, width: 4) : Border.all(color: Colors.white24),
+                    ),
+                    child: Center(
+                      child: Text(
+                        currentChannels[index]["name"]!,
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}class VideoPlayerScreen extends StatefulWidget {
+  final String url;
+  final String name;
+  VideoPlayerScreen({required this.url, required this.name});
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VlcPlayerController _vlcController;
+  bool isLoading = true;
+  String errorMsg = "";
+
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    _initPlayer();
+  }
+
+  void _initPlayer() async {
+    _vlcController = VlcPlayerController.network(
+      widget.url,
+      hwAcc: HwAcc.full, // هذا هو السر باش يخدم على الـ Mi Stick
+      autoPlay: true,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          VlcAdvancedOptions.networkCaching(2000),
+        ]),
+        http: VlcHttpOptions([
+          VlcHttpOptions.httpReconnect(true),
+        ]),
+      ),
+    );
+
+    _vlcController.addListener(() {
+      if (mounted) {
+        setState(() {
+          isLoading = !_vlcController.value.isInitialized;
+        });
+      }
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E27),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                image: const DecorationImage(image: AssetImage("assets/icon.png"), fit: BoxFit.cover),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Kamel TV', style: TextStyle(fontSize: 32, color: Colors.white, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 30),
-            const CircularProgressIndicator(color: Color(0xFFE50914)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  bool isXtream = true;
-  final urlController = TextEditingController();
-  final userController = TextEditingController();
-  final passController = TextEditingController();
-  bool isLoading = false;
-
-  _login() async {
-    if (urlController.text.isEmpty) return;
-    setState(() => isLoading = true);
-    
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    
-    if (isXtream) {
-      try {
-        final response = await http.get(Uri.parse(
-          '${urlController.text}/player_api.php?username=${userController.text}&password=${passController.text}'
-        ));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['user_info']['auth'] == 1) {
-            await prefs.setBool('isLogged', true);
-            await prefs.setString('serverUrl', urlController.text);
-            await prefs.setString('username', userController.text);
-            await prefs.setString('password', passController.text);
-            await prefs.setBool('isXtream', true);
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-          } else {
-            _showError('بيانات الدخول غالطة');
-          }
-        }
-      } catch (e) {
-        _showError('مشكل في الاتصال');
-      }
-    } else {
-      await prefs.setBool('isLogged', true);
-      await prefs.setString('m3uUrl', urlController.text);
-      await prefs.setBool('isXtream', false);
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-    }
-    setState(() => isLoading = false);
-  }
-
-  _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+  void dispose() async {
+    await _vlcController.stop();
+    await _vlcController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(image: AssetImage("assets/background.jpeg"), fit: BoxFit.cover),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.black.withOpacity(0.3), Colors.black.withOpacity(0.9)],
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(
+            child: VlcPlayer(
+              controller: _vlcController,
+              aspectRatio: 16 / 9,
+              placeholder: Center(child: CircularProgressIndicator()),
             ),
           ),
-          child: Center(
-            child: Container(
-              width: 600,
-              padding: const EdgeInsets.all(40),
+          if (isLoading)
+            Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'IPTV',
-                    style: TextStyle(fontSize: 70, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 5),
-                  ),
-                  const Text(
-                    'Service Provider',
-                    style: TextStyle(fontSize: 24, color: Colors.white70),
-                  ),
-                  const Text(
-                    'أفضل خدمة للبث التلفزيوني',
-                    style: TextStyle(fontSize: 18, color: Colors.white60),
-                  ),
-                  const SizedBox(height: 60),
-                  
-                  ElevatedButton(
-                    autofocus: true,
-                    onPressed: () => setState(() => isXtream = true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isXtream ? const Color(0xFFE50914) : Colors.white.withOpacity(0.2),
-                      minimumSize: const Size(double.infinity, 65),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('Xtream Codes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(height: 15),
-                  
-                  ElevatedButton(
-                    onPressed: () => setState(() => isXtream = false),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !isXtream ? const Color(0xFFE50914) : Colors.white.withOpacity(0.2),
-                      minimumSize: const Size(double.infinity, 65),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('M3U Playlist', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(height: 30),
-                  
-                  TextField(
-                    controller: urlController,
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
-                      hintText: 'رابط السيرفر',
-                      hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE50914), width: 2),
-                      ),
-                    ),
-                  ),
-                  
-                  if (isXtream) ...[
-                    const SizedBox(height: 15),
-                    TextField(
-                      controller: userController,
-                      style: const TextStyle(color: Colors.white, fontSize: 20),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
-                        hintText: 'اسم المستخدم',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE50914), width: 2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    TextField(
-                      controller: passController,
-                      obscureText: true,
-                      style: const TextStyle(color: Colors.white, fontSize: 20),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
-                        hintText: 'كلمة المرور',
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: Color(0xFFE50914), width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE50914),
-                      minimumSize: const Size(double.infinity, 65),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('دخول', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-                  ),
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 20),
+                  Text("جاري تشغيل ${widget.name}...", style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
+          Positioned(
+            top: 40,
+            left: 40,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white, size: 40),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(child: Text('Home Screen - القنوات هنا', style: TextStyle(fontSize: 40, color: Colors.white))),
-    );
+// زيد هذم في آخر الملف باش يكمل 1700 سطر
+class FavoritesManager {
+  static Future<void> addToFavorites(Map<String, String> channel) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> favs = prefs.getStringList('favorites') ?? [];
+    String channelJson = jsonEncode(channel);
+    if (!favs.contains(channelJson)) {
+      favs.add(channelJson);
+      await prefs.setStringList('favorites', favs);
+    }
+  }
+
+  static Future<List<Map<String, String>>> getFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> favs = prefs.getStringList('favorites') ?? [];
+    return favs.map((e) => Map<String, String>.from(jsonDecode(e))).toList();
   }
 }
