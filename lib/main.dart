@@ -84,8 +84,13 @@ class _TvLoginState extends State<TvLogin> {
           },
           child: Container(
             width: big ? 380 : 260, height: 65, 
-            decoration: BoxDecoration(color: selected ? Colors.pinkAccent : (t == 'اتصال' ? Colors.redAccent : Colors.blue.shade900), borderRadius: BorderRadius.circular(30), border: h ? Border.all(color: Colors.white, width: 4) : null), 
+            decoration: BoxDecoration(
+              color: selected ? Colors.pinkAccent : (t == 'اتصال' ? Colors.redAccent : Colors.blue.shade900), 
+              borderRadius: BorderRadius.circular(30), 
+              border: h ? Border.all(color: Colors.white, width: 4) : null
+            ), 
             child: Center(child: Text(t, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)))
+          )
         ); 
       }),
     );
@@ -99,7 +104,13 @@ class _TvLoginState extends State<TvLogin> {
         controller: c, 
         focusNode: n, 
         obscureText: h.contains('كلمة'), 
-        decoration: InputDecoration(hintText: h, filled: true, fillColor: Colors.grey.shade900, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), 
+        decoration: InputDecoration(
+          hintText: h, 
+          filled: true, 
+          fillColor: Colors.grey.shade900, 
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.pinkAccent, width: 2))
+        ), 
         style: const TextStyle(fontSize: 20)
       )
     );
