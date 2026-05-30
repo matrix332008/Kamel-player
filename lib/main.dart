@@ -64,10 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/background.jpeg"), // اسم صحيح
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: AssetImage("assets/background.jpeg"), fit: BoxFit.cover),
         ),
         child: const Center(
           child: Column(
@@ -142,10 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/background.jpeg"), // اسم صحيح
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: AssetImage("assets/background.jpeg"), fit: BoxFit.cover),
         ),
         child: Container(
           color: Colors.black.withOpacity(0.75),
@@ -163,10 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: Colors.red, width: 3),
-                          image: const DecorationImage(
-                            image: AssetImage("assets/icon.png"), // اسم صحيح
-                            fit: BoxFit.cover,
-                          ),
+                          image: const DecorationImage(image: AssetImage("assets/icon.png"), fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 15),
@@ -319,11 +310,11 @@ class HomeScreen extends StatelessWidget {
                   const Text('Service Provider', style: TextStyle(fontSize: 22, color: Colors.white70)),
                   const SizedBox(height: 80),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    _btn('LIVE TV', Icons.live_tv, true),
+                    _btn(context, 'LIVE TV', Icons.live_tv, true),
                     const SizedBox(width: 40),
-                    _btn('SERIES', Icons.tv, false),
+                    _btn(context, 'SERIES', Icons.tv, false),
                     const SizedBox(width: 40),
-                    _btn('FILMS', Icons.movie, false),
+                    _btn(context, 'FILMS', Icons.movie, false),
                   ]),
                 ],
               ),
@@ -334,7 +325,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _btn(String title, IconData icon, bool autofocus) {
+  Widget _btn(BuildContext context, String title, IconData icon, bool autofocus) {
     return Focus(
       autofocus: autofocus,
       child: Builder(builder: (context) {
