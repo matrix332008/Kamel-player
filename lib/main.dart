@@ -19,30 +19,330 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.select): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.enter): ActivateIntent(),
-        LogicalKeySet(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
-        LogicalKeySet(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-        LogicalKeySet(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-        LogicalKeySet(LogicalKeyboardKey.mediaPlayPause): ActivateIntent(),
-      },
-      child: MaterialApp(
-        title: 'Kamel TV',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark().copyWith(
-          scaffoldBackgroundColor: Color(0xFF0F0F0F),
-          primaryColor: Color(0xFFE50914),
-        ),
-        home: IPTVHomePage(),
-      ),
+    return MaterialApp(
+      title: 'Kamel TV',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      home: LoginScreen(),
     );
   }
 }
 
-class Channel {
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  bool isXtreamSelected = true;
+  TextEditingController serverController = TextEditingController();
+  TextEditingController usernameController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  TextEditingController m3uController = TextEditingController();
+  bool isLoading = false;
+  
+  FocusNode xtreamFocusNode = FocusNode();
+  FocusNode m3uFocusNode = FocusNode();
+  FocusNode serverFocusNode = FocusNode();
+  FocusNode usernameFocusNode = FocusNode();
+  FocusNode passwordFocusNode = FocusNode();
+  FocusNode m3uUrlFocusNode = FocusNode();
+  FocusNode loginBtnFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedLogin();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(xtreamFocusNode);
+    });
+  }
+
+  Future<void> _checkSavedLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedType = prefs.getString('login_type');
+    if (savedType != null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => IPTVHomePage()));
+    }
+  }
+
+  Future<void> _login() async {
+    setState(() => isLoading = true);
+    final prefs = await SharedPreferences.getInstance();
+
+    if (isXtreamSelected) {
+      String server = serverController.text.trim();
+      String username = usernameController.text.trim();
+      String password = passwordController.text.trim();
+
+      if (server.isEmpty || username.isEmpty || password.isEmpty) {
+        _showError("عبي كل الخانات");
+        return;
+      }
+
+      String m3uUrl = "$server/get.php?username=$username&password=$password&type=m3u_plus&output=ts";
+      bool isValid = await _testM3U(m3uUrl);
+      if (isValid) {
+        await prefs.setString('login_type', 'xtream');
+        await prefs.setString('m3u_url', m3uUrl);
+        await prefs.setString('server', server);
+        await prefs.setString('username', username);
+        await prefs.setString('password', password);
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => IPTVHomePage()));
+      } else {
+        _showError("معلومات الدخول غالطة");
+      }
+    } else {
+      String m3uUrl = m3uController.text.trim();
+      if (m3uUrl.isEmpty || !m3uUrl.startsWith('http')) {
+        _showError("الرابط غير صحيح");
+        return;
+      }
+
+      bool isValid = await _testM3U(m3uUrl);
+      if (isValid) {
+        await prefs.setString('login_type', 'm3u');
+        await prefs.setString('m3u_url', m3uUrl);
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => IPTVHomePage()));
+      } else {
+        _showError("الرابط لا يعمل");
+      }
+    }
+    setState(() => isLoading = false);
+  }
+
+  Future<bool> _testM3U(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(Duration(seconds: 10));
+      return response.statusCode == 200 && response.body.contains('#EXTINF');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void _showError(String msg) {
+    setState(() => isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
+  }
+
+  @override
+  void dispose() {
+    xtreamFocusNode.dispose();
+    m3uFocusNode.dispose();
+    serverFocusNode.dispose();
+    usernameFocusNode.dispose();
+    passwordFocusNode.dispose();
+    m3uUrlFocusNode.dispose();
+    loginBtnFocusNode.dispose();
+    serverController.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
+    m3uController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/background.jpeg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.darken),
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Column(
+                children: [
+                  SizedBox(height: 20),
+                  Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Color(0xFFE50914), width: 4),
+                      image: DecorationImage(
+                        image: AssetImage('assets/icon.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text("Kamel TV", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFFE50914))),
+                  SizedBox(height: 25),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildToggleButton("Xtream Codes", isXtreamSelected, xtreamFocusNode, () {
+                        setState(() {
+                          isXtreamSelected = true;
+                          FocusScope.of(context).requestFocus(serverFocusNode);
+                        });
+                      }),
+                      SizedBox(width: 20),
+                      _buildToggleButton("M3U Playlist", !isXtreamSelected, m3uFocusNode, () {
+                        setState(() {
+                          isXtreamSelected = false;
+                          FocusScope.of(context).requestFocus(m3uUrlFocusNode);
+                        });
+                      }),
+                    ],
+                  ),
+                  SizedBox(height: 25),
+                  Container(
+                    width: 500,
+                    child: isXtreamSelected ? _buildXtreamFields() : _buildM3UField(),
+                  ),
+                  SizedBox(height: 20),
+                  _buildLoginButton(),
+                  if (isLoading) ...[
+                    SizedBox(height: 20),
+                    CircularProgressIndicator(color: Color(0xFFE50914)),
+                  ],
+                  SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton(String text, bool isSelected, FocusNode node, VoidCallback onTap) {
+    return Focus(
+      focusNode: node,
+      onKey: (node, event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowRight && text == "Xtream Codes") {
+            FocusScope.of(context).requestFocus(m3uFocusNode);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft && text == "M3U Playlist") {
+            FocusScope.of(context).requestFocus(xtreamFocusNode);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            FocusScope.of(context).requestFocus(isXtreamSelected ? serverFocusNode : m3uUrlFocusNode);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+            onTap();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 220,
+          height: 60,
+          decoration: BoxDecoration(
+            color: isSelected ? Color(0xFFE50914) : Color(0xFF3B3B9A),
+            borderRadius: BorderRadius.circular(10),
+            border: node.hasFocus ? Border.all(color: Colors.white, width: 4) : null,
+            boxShadow: node.hasFocus ? [BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 10)] : [],
+          ),
+          child: Center(
+            child: Text(text, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildXtreamFields() {
+    return Column(
+      children: [
+        _buildTextField("رابط السيرفر", serverController, Icons.dns, serverFocusNode, usernameFocusNode, null),
+        SizedBox(height: 15),
+        _buildTextField("اسم المستخدم", usernameController, Icons.person, usernameFocusNode, passwordFocusNode, serverFocusNode),
+        SizedBox(height: 15),
+        _buildTextField("كلمة المرور", passwordController, Icons.lock, passwordFocusNode, loginBtnFocusNode, usernameFocusNode, isPassword: true),
+      ],
+    );
+  }
+
+  Widget _buildM3UField() {
+    return _buildTextField("رابط M3U", m3uController, Icons.link, m3uUrlFocusNode, loginBtnFocusNode, null);
+  }
+
+  Widget _buildTextField(String hint, TextEditingController controller, IconData icon, FocusNode currentNode, FocusNode? nextNode, FocusNode? prevNode, {bool isPassword = false}) {
+    return Focus(
+      focusNode: currentNode,
+      onKey: (node, event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown && nextNode != null) {
+            FocusScope.of(context).requestFocus(nextNode);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp && prevNode != null) {
+            FocusScope.of(context).requestFocus(prevNode);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: currentNode.hasFocus ? Color(0xFFE50914) : Colors.white24, width: currentNode.hasFocus ? 3 : 1),
+          boxShadow: currentNode.hasFocus ? [BoxShadow(color: Color(0xFFE50914).withOpacity(0.3), blurRadius: 10)] : [],
+        ),
+        child: TextField(
+          controller: controller,
+          obscureText: isPassword,
+          style: TextStyle(color: Colors.white, fontSize: 18),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: currentNode.hasFocus ? Color(0xFFE50914) : Colors.white54),
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.white38),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginButton() {
+    return Focus(
+      focusNode: loginBtnFocusNode,
+      onKey: (node, event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            FocusScope.of(context).requestFocus(isXtreamSelected ? passwordFocusNode : m3uUrlFocusNode);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
+            _login();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: _login,
+        child: Container(
+          width: 500,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Color(0xFFE50914),
+            borderRadius: BorderRadius.circular(10),
+            border: loginBtnFocusNode.hasFocus ? Border.all(color: Colors.white, width: 4) : null,
+            boxShadow: loginBtnFocusNode.hasFocus ? [BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 15)] : [],
+          ),
+          child: Center(
+            child: Text("دخول", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ),
+    );
+  }
+}class Channel {
   final String name;
   final String url;
   final String logo;
@@ -105,24 +405,67 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
     super.initState();
     _loadChannels();
     _loadFavorites();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_categoryFocusNode);
+    });
   }
 
   Future<void> _loadChannels() async {
-    // هذي القنوات متاعك - حط روابطك هنا
-    setState(() {
-      allChannels = [
-        Channel(name: "Bein Sport 1", url: "http://your-link.m3u8", logo: "", group: "Bein Sports"),
-        Channel(name: "Bein Sport 2", url: "http://your-link2.m3u8", logo: "", group: "Bein Sports"),
-        Channel(name: "SSC 1", url: "http://your-link3.m3u8", logo: "", group: "SSC"),
-        Channel(name: "MBC 1", url: "http://your-link4.m3u8", logo: "", group: "MBC"),
-        Channel(name: "MBC 2", url: "http://your-link5.m3u8", logo: "", group: "MBC"),
-        // زيد قنواتك هنا...
-      ];
+    final prefs = await SharedPreferences.getInstance();
+    String? m3uUrl = prefs.getString('m3u_url');
 
-      categories = ["الكل", "المفضلة"] + allChannels.map((e) => e.group).toSet().toList();
-      _filterChannels();
-      isLoading = false;
-    });
+    if (m3uUrl == null) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+      return;
+    }
+
+    setState(() => isLoading = true);
+    try {
+      final response = await http.get(Uri.parse(m3uUrl)).timeout(Duration(seconds: 20));
+      if (response.statusCode == 200) {
+        allChannels = _parseM3UContent(response.body);
+        categories = ["الكل", "المفضلة"] + allChannels.map((e) => e.group).toSet().toList();
+        _filterChannels();
+      }
+    } catch (e) {
+      _showError("خطأ في تحميل القنوات");
+    }
+    setState(() => isLoading = false);
+  }
+
+  List<Channel> _parseM3UContent(String content) {
+    List<Channel> channels = [];
+    List<String> lines = content.split('\n');
+
+    String? currentName;
+    String? currentLogo;
+    String? currentGroup;
+
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i].trim();
+
+      if (line.startsWith('#EXTINF:')) {
+        RegExp nameRegex = RegExp(r',(.+)$');
+        RegExp logoRegex = RegExp(r'tvg-logo="([^"]*)"');
+        RegExp groupRegex = RegExp(r'group-title="([^"]*)"');
+
+        currentName = nameRegex.firstMatch(line)?.group(1)?.trim();
+        currentLogo = logoRegex.firstMatch(line)?.group(1)?.trim()?? "";
+        currentGroup = groupRegex.firstMatch(line)?.group(1)?.trim()?? "عام";
+
+      } else if (line.startsWith('http') && currentName!= null) {
+        channels.add(Channel(
+          name: currentName,
+          url: line,
+          logo: currentLogo?? "",
+          group: currentGroup?? "عام",
+        ));
+        currentName = null;
+        currentLogo = null;
+        currentGroup = null;
+      }
+    }
+    return channels;
   }
 
   Future<void> _loadFavorites() async {
@@ -172,32 +515,59 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
       if (event.logicalKey == LogicalKeyboardKey.arrowRight && isCategoryFocused) {
         setState(() {
           isCategoryFocused = false;
-          _gridFocusNode.requestFocus();
+          FocusScope.of(context).requestFocus(_gridFocusNode);
         });
       } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft &&!isCategoryFocused && selectedChannelIndex % 4 == 0) {
         setState(() {
           isCategoryFocused = true;
-          _categoryFocusNode.requestFocus();
+          FocusScope.of(context).requestFocus(_categoryFocusNode);
         });
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
         if (isCategoryFocused && selectedCategoryIndex > 0) {
           setState(() => selectedCategoryIndex--);
           _selectCategory(selectedCategoryIndex);
+          _scrollToCategory(selectedCategoryIndex);
         } else if (!isCategoryFocused && selectedChannelIndex >= 4) {
           setState(() => selectedChannelIndex -= 4);
+          _scrollToChannel(selectedChannelIndex);
         }
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         if (isCategoryFocused && selectedCategoryIndex < categories.length - 1) {
           setState(() => selectedCategoryIndex++);
           _selectCategory(selectedCategoryIndex);
+          _scrollToCategory(selectedCategoryIndex);
         } else if (!isCategoryFocused && selectedChannelIndex + 4 < filteredChannels.length) {
           setState(() => selectedChannelIndex += 4);
+          _scrollToChannel(selectedChannelIndex);
         }
       } else if (event.logicalKey == LogicalKeyboardKey.select || event.logicalKey == LogicalKeyboardKey.enter) {
         if (!isCategoryFocused && filteredChannels.isNotEmpty) {
           _playChannel(filteredChannels[selectedChannelIndex]);
         }
+      } else if (event.logicalKey == LogicalKeyboardKey.contextMenu || event.logicalKey == LogicalKeyboardKey.goBack) {
+        _showLogoutDialog();
       }
+    }
+  }
+
+  void _scrollToCategory(int index) {
+    if (_categoryScrollController.hasClients) {
+      _categoryScrollController.animateTo(
+        index * 60.0,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _scrollToChannel(int index) {
+    if (_channelScrollController.hasClients) {
+      int row = index ~/ 4;
+      _channelScrollController.animateTo(
+        row * 200.0,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -214,6 +584,38 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
       MaterialPageRoute(
         builder: (context) => VideoPlayerScreen(channel: channel, onFavoriteToggle: () => _toggleFavorite(channel)),
       ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Color(0xFF1E1E1E),
+        title: Text("تسجيل الخروج", style: TextStyle(color: Colors.white)),
+        content: Text("تحب تبدل الاشتراك؟", style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("لا", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFE50914)),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+            },
+            child: Text("نعم", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
     );
   }
 
@@ -236,7 +638,7 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
       autofocus: true,
       child: Scaffold(
         body: isLoading
-         ? Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
+        ? Center(child: CircularProgressIndicator(color: Color(0xFFE50914)))
           : Container(
               decoration: BoxDecoration(
                 image: DecorationImage(
@@ -247,7 +649,6 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
               ),
               child: Column(
                 children: [
-                  // Search Bar
                   Container(
                     padding: EdgeInsets.all(20),
                     child: Row(
@@ -282,14 +683,17 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
                             ),
                           ),
                         ),
+                        SizedBox(width: 20),
+                        IconButton(
+                          icon: Icon(Icons.logout, color: Colors.white),
+                          onPressed: _showLogoutDialog,
+                        ),
                       ],
                     ),
                   ),
-                  // Main Content
                   Expanded(
                     child: Row(
                       children: [
-                        // Categories
                         Container(
                           width: 280,
                           padding: EdgeInsets.only(left: 20, top: 10, bottom: 20),
@@ -313,6 +717,7 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
                                             selectedCategoryIndex = index;
                                             _selectCategory(index);
                                             isCategoryFocused = false;
+                                            FocusScope.of(context).requestFocus(_gridFocusNode);
                                           });
                                         },
                                         child: Container(
@@ -322,18 +727,22 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
                                             color: isSelected? Color(0xFFE50914) : Colors.white.withOpacity(0.05),
                                             borderRadius: BorderRadius.circular(10),
                                             border: isFocused? Border.all(color: Colors.white, width: 3) : null,
+                                            boxShadow: isFocused? [BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 10)] : [],
                                           ),
                                           child: Row(
                                             children: [
                                               Icon(
-                                                categories[index] == "المفضلة"? Icons.favorite : Icons.tv,
+                                                categories[index] == "المفضلة"? Icons.favorite : categories[index] == "الكل"? Icons.apps : Icons.tv,
                                                 color: Colors.white,
                                                 size: 20,
                                               ),
                                               SizedBox(width: 15),
-                                              Text(
-                                                categories[index],
-                                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: isSelected? FontWeight.bold : FontWeight.normal),
+                                              Expanded(
+                                                child: Text(
+                                                  categories[index],
+                                                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: isSelected? FontWeight.bold : FontWeight.normal),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -346,12 +755,11 @@ class _IPTVHomePageState extends State<IPTVHomePage> {
                             ],
                           ),
                         ),
-                        // Channels Grid
                         Expanded(
                           child: Focus(
                             focusNode: _gridFocusNode,
                             child: filteredChannels.isEmpty
-                             ? Center(child: Text("لا توجد قنوات", style: TextStyle(color: Colors.white54, fontSize: 20)))
+                            ? Center(child: Text("لا توجد قنوات", style: TextStyle(color: Colors.white54, fontSize: 20)))
                               : GridView.builder(
                                   controller: _channelScrollController,
                                   padding: EdgeInsets.all(20),
@@ -525,7 +933,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         _increaseVolume();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         _decreaseVolume();
-      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+      } else if (event.logicalKey == LogicalKeyboardKey.escape || event.logicalKey == LogicalKeyboardKey.goBack) {
         Navigator.pop(context);
       }
     }
@@ -533,12 +941,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   void _seekForward() {
     final newPosition = _position + Duration(seconds: 10);
-    _vlcController.seekTo(newPosition < _duration? newPosition : _duration);
+    _vlcController.seekTo(newPosition < _duration ? newPosition : _duration);
   }
 
   void _seekBackward() {
     final newPosition = _position - Duration(seconds: 10);
-    _vlcController.seekTo(newPosition > Duration.zero? newPosition : Duration.zero);
+    _vlcController.seekTo(newPosition > Duration.zero ? newPosition : Duration.zero);
   }
 
   void _increaseVolume() {
@@ -584,7 +992,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           onTap: _toggleControls,
           child: Stack(
             children: [
-              // Video Player
               Center(
                 child: _errorMessage.isNotEmpty
                  ? _buildErrorWidget()
@@ -595,7 +1002,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     ),
               ),
               
-              // Buffering Indicator
               if (_isBuffering && _errorMessage.isEmpty)
                 Center(
                   child: Container(
@@ -615,7 +1021,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ),
                 ),
               
-              // Controls Overlay
               if (_showControls && _errorMessage.isEmpty)
                 _buildControlsOverlay(),
             ],
@@ -671,7 +1076,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Top Bar
           Container(
             padding: EdgeInsets.symmetric(horizontal: 40, vertical: 30),
             child: Row(
@@ -698,8 +1102,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ),
                 IconButton(
                   icon: Icon(
-                    widget.channel.isFavorite? Icons.favorite : Icons.favorite_border,
-                    color: widget.channel.isFavorite? Color(0xFFE50914) : Colors.white,
+                    widget.channel.isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: widget.channel.isFavorite ? Color(0xFFE50914) : Colors.white,
                     size: 35,
                   ),
                   onPressed: () {
@@ -711,7 +1115,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
           ),
           
-          // Center Play/Pause
           Center(
             child: GestureDetector(
               onTap: () {
@@ -728,7 +1131,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _isPlaying? Icons.pause : Icons.play_arrow,
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
                   size: 60,
                 ),
@@ -736,12 +1139,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
           ),
           
-          // Bottom Bar
           Container(
             padding: EdgeInsets.symmetric(horizontal: 40, vertical: 30),
             child: Column(
               children: [
-                // Progress Bar
                 Row(
                   children: [
                     Text(_formatDuration(_position), style: TextStyle(color: Colors.white, fontSize: 14)),
@@ -757,7 +1158,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
                         child: Slider(
                           value: _position.inSeconds.toDouble(),
-                          max: _duration.inSeconds.toDouble() > 0? _duration.inSeconds.toDouble() : 1.0,
+                          max: _duration.inSeconds.toDouble() > 0 ? _duration.inSeconds.toDouble() : 1.0,
                           onChanged: (value) {
                             _vlcController.seekTo(Duration(seconds: value.toInt()));
                           },
@@ -768,7 +1169,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ],
                 ),
                 SizedBox(height: 15),
-                // Control Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -778,7 +1178,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     ),
                     SizedBox(width: 20),
                     IconButton(
-                      icon: Icon(_isPlaying? Icons.pause_circle_filled : Icons.play_circle_filled, color: Colors.white, size: 60),
+                      icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, color: Colors.white, size: 60),
                       onPressed: () {
                         if (_isPlaying) {
                           _vlcController.pause();
@@ -795,7 +1195,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   ],
                 ),
                 SizedBox(height: 10),
-                // Volume
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -835,319 +1234,5 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
     );
   }
-}// Helper Functions و Extensions
-extension ChannelListExtension on List<Channel> {
-  void sortByName() {
-    sort((a, b) => a.name.compareTo(b.name));
-  }
-  
-  List<Channel> search(String query) {
-    if (query.isEmpty) return this;
-    return where((channel) => 
-      channel.name.toLowerCase().contains(query.toLowerCase()) ||
-      channel.group.toLowerCase().contains(query.toLowerCase())
-    ).toList();
-  }
 }
-
-class M3UParser {
-  static Future<List<Channel>> parseFromUrl(String url) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        return parseM3UContent(response.body);
-      }
-    } catch (e) {
-      print("Error loading M3U: $e");
-    }
-    return [];
-  }
-
-  static List<Channel> parseM3UContent(String content) {
-    List<Channel> channels = [];
-    List<String> lines = content.split('\n');
-    
-    String? currentName;
-    String? currentLogo;
-    String? currentGroup;
-    
-    for (int i = 0; i < lines.length; i++) {
-      String line = lines[i].trim();
-      
-      if (line.startsWith('#EXTINF:')) {
-        // Parse channel info
-        RegExp nameRegex = RegExp(r',(.+)$');
-        RegExp logoRegex = RegExp(r'tvg-logo="([^"]*)"');
-        RegExp groupRegex = RegExp(r'group-title="([^"]*)"');
-        
-        currentName = nameRegex.firstMatch(line)?.group(1)?.trim();
-        currentLogo = logoRegex.firstMatch(line)?.group(1)?.trim()?? "";
-        currentGroup = groupRegex.firstMatch(line)?.group(1)?.trim()?? "عام";
-        
-      } else if (line.startsWith('http') && currentName != null) {
-        // This is the URL line
-        channels.add(Channel(
-          name: currentName,
-          url: line,
-          logo: currentLogo?? "",
-          group: currentGroup?? "عام",
-        ));
-        currentName = null;
-        currentLogo = null;
-        currentGroup = null;
-      }
-    }
-    
-    return channels;
-  }
-}
-
-class NetworkChecker {
-  static Future<bool> hasConnection() async {
-    try {
-      final result = await http.get(Uri.parse('https://www.google.com')).timeout(Duration(seconds: 5));
-      return result.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-}
-
-class AppConstants {
-  static const String appName = "Kamel TV";
-  static const String appVersion = "1.0.0";
-  static const Color primaryColor = Color(0xFFE50914);
-  static const Color backgroundColor = Color(0xFF0F0F0F);
-  static const Color cardColor = Color(0xFF1E1E1E);
-  static const Color textColor = Colors.white;
-  static const Color textSecondaryColor = Colors.white70;
-  
-  static const double gridSpacing = 15.0;
-  static const double borderRadius = 12.0;
-  static const int crossAxisCount = 4;
-  static const double childAspectRatio = 16 / 10;
-}
-
-class CustomSnackBar {
-  static void show(BuildContext context, String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError? Icons.error_outline : Icons.check_circle_outline,
-              color: Colors.white,
-            ),
-            SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-}
-
-class LoadingDialog {
-  static void show(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        child: Padding(
-          padding: EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppConstants.primaryColor),
-              SizedBox(height: 20),
-              Text(message, style: TextStyle(color: Colors.white, fontSize: 16)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  static void hide(BuildContext context) {
-    Navigator.of(context).pop();
-  }
-}
-
-// Extension للـ Focus
-extension FocusExtension on BuildContext {
-  void requestFocusAndScroll(FocusNode node, ScrollController controller, int index) {
-    FocusScope.of(this).requestFocus(node);
-    if (controller.hasClients) {
-      controller.animateTo(
-        index * 60.0,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-}
-
-// Widget للـ Empty State
-class EmptyStateWidget extends StatelessWidget {
-  final String message;
-  final IconData icon;
-  
-  EmptyStateWidget({
-    required this.message,
-    this.icon = Icons.tv_off,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: Colors.white24),
-          SizedBox(height: 20),
-          Text(
-            message,
-            style: TextStyle(color: Colors.white54, fontSize: 18),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Widget للـ Channel Card
-class ChannelCardWidget extends StatelessWidget {
-  final Channel channel;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-  
-  ChannelCardWidget({
-    required this.channel,
-    required this.isSelected,
-    required this.onTap,
-    required this.onLongPress,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          color: AppConstants.cardColor,
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          border: isSelected
-           ? Border.all(color: AppConstants.primaryColor, width: 4)
-            : Border.all(color: Colors.white12, width: 1),
-          boxShadow: isSelected
-           ? [
-                BoxShadow(
-                  color: AppConstants.primaryColor.withOpacity(0.5),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                )
-              ]
-            : [],
-        ),
-        child: Stack(
-          children: [
-            // Channel Logo or Icon
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.play_circle_filled,
-                      size: 40,
-                      color: Colors.white38,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      channel.name,
-                      style: TextStyle(
-                        color: AppConstants.textColor,
-                        fontSize: 14,
-                        fontWeight: isSelected? FontWeight.bold : FontWeight.normal,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    channel.group,
-                    style: TextStyle(
-                      color: AppConstants.textSecondaryColor,
-                      fontSize: 11,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            // Favorite Badge
-            if (channel.isFavorite)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppConstants.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.favorite, color: Colors.white, size: 16),
-                ),
-              ),
-            // Selected Indicator
-            if (isSelected)
-              Positioned(
-                bottom: 8,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppConstants.primaryColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      "تشغيل",
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// نهاية الملف - 1700 سطر كاملين
+// نهاية الملف - 1153 سطر كاملين
