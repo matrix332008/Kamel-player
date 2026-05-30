@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const KamelTVApp());
+  runApp(const KamelApp());
 }
 
-class KamelTVApp extends StatelessWidget {
-  const KamelTVApp({super.key});
+class KamelApp extends StatelessWidget {
+  const KamelApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0A0A1A),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-          filled: true,
-          fillColor: Color(0xFF1A1A2E),
-        ),
       ),
       home: const LoginScreen(),
     );
@@ -57,34 +52,44 @@ class _LoginScreenState extends State<LoginScreen> {
             colors: [Color(0xFF1A1A2E), Color(0xFF0A0A1A)],
           ),
         ),
-        child: Center(
-          child: Container(
-            width: 900,
-            padding: const EdgeInsets.all(50),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('KAMEL TV', style: TextStyle(fontSize: 70, fontWeight: FontWeight.bold, color: Colors.red)),
-                const SizedBox(height: 40),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Expanded(child: RadioListTile(value: true, groupValue: isXtream, onChanged: (v) => setState(() => isXtream = v!), title: const Text('Xtream Codes', style: TextStyle(fontSize: 24)))),
-                  Expanded(child: RadioListTile(value: false, groupValue: isXtream, onChanged: (v) => setState(() => isXtream = v!), title: const Text('M3U Playlist', style: TextStyle(fontSize: 24)))),
-                ]),
-                const SizedBox(height: 25),
-                TextField(controller: url, autofocus: true, decoration: InputDecoration(labelText: isXtream ? 'Server URL http://...' : 'M3U URL http://...'), style: const TextStyle(fontSize: 22)),
-                const SizedBox(height: 15),
-                if (isXtream) ...[
-                  TextField(controller: user, decoration: const InputDecoration(labelText: 'Username'), style: const TextStyle(fontSize: 22)),
+        // هذا هو الحل متاع الزر المخفي + الـ D-Pad
+        child: SingleChildScrollView(
+          child: Center(
+            child: Container(
+              width: 900,
+              padding: const EdgeInsets.all(50),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  const Text('KAMEL TV', style: TextStyle(fontSize: 70, fontWeight: FontWeight.bold, color: Colors.red)),
+                  const SizedBox(height: 40),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Expanded(child: RadioListTile(value: true, groupValue: isXtream, onChanged: (v) => setState(() => isXtream = v!), title: const Text('Xtream Codes', style: TextStyle(fontSize: 24)))),
+                    Expanded(child: RadioListTile(value: false, groupValue: isXtream, onChanged: (v) => setState(() => isXtream = v!), title: const Text('M3U Playlist', style: TextStyle(fontSize: 24)))),
+                  ]),
+                  const SizedBox(height: 25),
+                  TextField(controller: url, autofocus: true, decoration: InputDecoration(labelText: isXtream ? 'Server URL http://...' : 'M3U URL http://...', border: const OutlineInputBorder()), style: const TextStyle(fontSize: 22)),
                   const SizedBox(height: 15),
-                  TextField(controller: pass, decoration: const InputDecoration(labelText: 'Password'), style: const TextStyle(fontSize: 22), obscureText: true),
+                  if (isXtream) ...[
+                    TextField(controller: user, decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder()), style: const TextStyle(fontSize: 22)),
+                    const SizedBox(height: 15),
+                    TextField(controller: pass, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()), style: const TextStyle(fontSize: 22), obscureText: true),
+                  ],
+                  const SizedBox(height: 35),
+                  // بطمة "اتصال" رجعت وتوة تبان 100%
+                  SizedBox(
+                    width: 450, 
+                    height: 70, 
+                    child: ElevatedButton(
+                      onPressed: login, 
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), 
+                      child: const Text('اتصال', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold))
+                    )
+                  ),
+                  const SizedBox(height: 40),
                 ],
-                const SizedBox(height: 35),
-                SizedBox(width: 450, height: 70, child: ElevatedButton(onPressed: login, style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: const Text('اتصال', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)))),
-              ],
+              ),
             ),
           ),
         ),
@@ -108,7 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -118,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Top bar
           Positioned(
             top: 30, left: 40, right: 40,
             child: Row(
@@ -127,16 +130,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(children: [
                   Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.person, size: 35)),
                   const SizedBox(width: 15),
-                  Text('Kamel TV', style: TextStyle(fontSize: 24, color: Colors.greenAccent, shadows: [Shadow(blurRadius: 10, color: Colors.greenAccent)])),
+                  const Text('Kamel TV', style: TextStyle(fontSize: 24, color: Colors.greenAccent)),
                 ]),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('20:31:26', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('22/05/2026', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                const Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text('20:31:26', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('22/05/2026', style: TextStyle(fontSize: 16, color: Colors.grey)),
                 ]),
               ],
             ),
           ),
-          // Center content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                   decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white24)),
-                  child: Text('VOTRE ABONNEMENT SERA EXPIRÉ LE : ${widget.expiry}', style: const TextStyle(fontSize: 18)),
+                  child: Text('VOTRE ABONNEMENT EXPIRE LE : ${widget.expiry}', style: const TextStyle(fontSize: 18)),
                 ),
               ],
             ),
@@ -174,23 +176,20 @@ class _HomeScreenState extends State<HomeScreen> {
       onFocusChange: (hasFocus) {
         if (hasFocus) setState(() => selected = index);
       },
-      child: GestureDetector(
-        onTap: () {},
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 280, height: 160,
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.red : color,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: isSelected ? Colors.white : Colors.white30, width: isSelected ? 4 : 2),
-            boxShadow: isSelected ? [BoxShadow(color: Colors.red.withOpacity(0.6), blurRadius: 20, spreadRadius: 5)] : [],
-          ),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 60, color: Colors.white),
-            const SizedBox(height: 15),
-            Text(title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-          ]),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 280, height: 160,
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.red : color,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: isSelected ? Colors.white : Colors.white30, width: isSelected ? 4 : 2),
+          boxShadow: isSelected ? [BoxShadow(color: Colors.red.withOpacity(0.6), blurRadius: 20, spreadRadius: 5)] : [],
         ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, size: 60, color: Colors.white),
+          const SizedBox(height: 15),
+          Text(title, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+        ]),
       ),
     );
   }
